@@ -1,0 +1,17 @@
+# Android NDK cross-compilation targets.
+# cargo-ndk sets the correct linker automatically when invoked via:
+#   cargo ndk -t arm64-v8a -t armeabi-v7a build --release
+#
+# These entries are for manual/CI builds without cargo-ndk.
+
+[target.aarch64-linux-android]
+linker = "aarch64-linux-android-clang"
+ar = "aarch64-linux-android-ar"
+
+[target.armv7-linux-androideabi]
+linker = "armv7a-linux-androideabi-clang"
+ar = "arm-linux-androideabi-ar"
+
+[target.x86_64-linux-android]
+linker = "x86_64-linux-android-clang"
+ar = "x86_64-linux-android-ar"

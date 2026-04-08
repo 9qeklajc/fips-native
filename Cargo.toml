@@ -1,0 +1,3 @@
+[workspace]
+members = ["fips-jni"]
+resolver = "2"

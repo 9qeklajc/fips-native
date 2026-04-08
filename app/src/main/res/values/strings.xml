@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FIPS</string>
+    <string name="vpn_description">FIPS decentralized mesh network</string>
+    <string name="notif_channel_name">FIPS Mesh VPN</string>
+    <string name="notif_active">Mesh network active</string>
+    <string name="btn_start">Start FIPS</string>
+    <string name="btn_stop">Stop FIPS</string>
+</resources>

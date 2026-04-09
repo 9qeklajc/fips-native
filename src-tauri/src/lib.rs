@@ -13,6 +13,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             dashboard::get_info,
+            dashboard::get_monitor_data,
             dashboard::explore_mesh,
             vpn::start_vpn,
             vpn::stop_vpn

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useQuery } from "@tanstack/react-query";
-import { TreeGraph } from "./TreeGraph";
+import { TreeGraph, type DirectPeer } from "./TreeGraph";
 import { MonitorView } from "./MonitorView";
 
 interface StatusData {
@@ -256,7 +256,6 @@ function StatChip({ label, value }: { label: string; value: string | number }) {
 }
 
 function App() {
-  const [exploring, setExploring] = useState(false);
   const [viewMode, setViewMode] = useState<"dashboard" | "monitor">(
     "dashboard",
   );
@@ -281,16 +280,15 @@ function App() {
     ? allData.transports
     : [];
 
-  const handleExplore = async () => {
-    setExploring(true);
-    try {
-      await invoke("explore_mesh");
-    } catch (err) {
-      console.error("Failed to explore mesh:", err);
-    } finally {
-      setExploring(false);
-    }
-  };
+  const directPeers: DirectPeer[] = peers.map((p) => ({
+    display_name: p.display_name,
+    npub: p.npub,
+    relationship: p.is_parent ? "parent" : p.is_child ? "child" : "peer",
+    srtt_ms: p.mmp?.srtt_ms,
+    lqi: p.mmp?.lqi,
+    loss_rate: p.mmp?.loss_rate,
+    goodput_bps: p.mmp?.goodput_bps,
+  }));
 
   if (isLoading && !status)
     return (
@@ -351,22 +349,6 @@ function App() {
                 Monitor View
               </button>
             )}
-            {/*
-            <button
-              onClick={handleExplore}
-              disabled={exploring}
-              className="px-4 py-2 bg-white text-black hover:bg-neutral-200 rounded-lg text-sm font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap"
-            >
-              {exploring ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                  Exploring...
-                </>
-              ) : (
-                "Explore Mesh"
-              )}
-            </button>
-            */}
           </div>
         </div>
 
@@ -520,7 +502,7 @@ function App() {
               )}
             </div>
             <div className="w-full">
-              <TreeGraph tree={tree} peers={peers} />
+              <TreeGraph tree={tree} peers={directPeers} />
             </div>
           </div>
         )}
@@ -816,12 +798,6 @@ function App() {
               <p className="text-neutral-500 text-sm mt-1">
                 Make sure the FIPS service is running and connected.
               </p>
-              <button
-                onClick={handleExplore}
-                className="mt-6 text-sm font-bold text-blue-400 hover:text-blue-300"
-              >
-                Try Exploring Mesh →
-              </button>
             </div>
           )}
       </div>

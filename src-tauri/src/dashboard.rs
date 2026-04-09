@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use serde_json::{json, Value};
@@ -128,5 +127,5 @@ pub async fn get_monitor_data(tab: String) -> Result<Value, String> {
 
 #[tauri::command]
 pub async fn explore_mesh() -> Result<(), String> {
-    fipsctl("explore").await.map(|_| ()).map_err(|e| e)
+    fipsctl("explore").await.map(|_| ())
 }

@@ -78,8 +78,8 @@ impl Default for AppConfig {
             },
             dns: DnsSection {
                 enabled: true,
-                bind_addr: "127.0.0.1".to_string(),
-                port: 5354,
+                bind_addr: "10.1.1.1".to_string(),
+                port: 53,
             },
             transports: TransportsSection {
                 udp_enabled: true,
@@ -170,13 +170,25 @@ async fn start_vpn_internal(state: &Arc<VpnStateInner>, tun_fd: Option<i32>, soc
     config.node.identity.persistent = app_config.node.persistent;
     config.node.identity.nsec = app_config.node.nsec.clone();
 
-    config.tun.enabled = app_config.tun.enabled;
+    let current_fd = tun_fd.or(*state.tun_fd.lock().await);
+
+    // If we have an FD, disable auto-creation of TUN in the config passed to Node::new
+    config.tun.enabled = current_fd.is_none() && app_config.tun.enabled;
     config.tun.name = Some(app_config.tun.name.clone());
     config.tun.mtu = Some(app_config.tun.mtu);
 
     config.dns.enabled = app_config.dns.enabled;
-    config.dns.bind_addr = Some(app_config.dns.bind_addr.clone());
-    config.dns.port = Some(app_config.dns.port);
+    #[cfg(target_os = "android")]
+    {
+        // Force DNS to bind to the VPN-accessible IP on Android
+        config.dns.bind_addr = Some("10.1.1.1".to_string());
+        config.dns.port = Some(53);
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        config.dns.bind_addr = Some(app_config.dns.bind_addr.clone());
+        config.dns.port = Some(app_config.dns.port);
+    }
 
     config.node.control.enabled = true;
     if let Some(path) = socket_path {
@@ -323,6 +335,7 @@ pub extern "C" fn Java_com_fips_app_FipsService_startRustServer(
     mut env: JNIEnv,
     _class: JClass,
     base_path: JString,
+    tun_fd: jni::sys::jint,
 ) {
     let base_path_str: String = env
         .get_string(&base_path)
@@ -331,6 +344,8 @@ pub extern "C" fn Java_com_fips_app_FipsService_startRustServer(
 
     let socket_path = std::path::Path::new(&base_path_str).join("fips-control.sock").to_string_lossy().to_string();
 
+    let tun_fd_opt = if tun_fd >= 0 { Some(tun_fd as i32) } else { None };
+
     let mut runtime_guard = RUNTIME.lock().unwrap();
     if runtime_guard.is_none() {
         *runtime_guard = Some(tokio::runtime::Runtime::new().expect("Failed to create tokio runtime"));
@@ -338,8 +353,8 @@ pub extern "C" fn Java_com_fips_app_FipsService_startRustServer(
 
     if let Some(rt) = runtime_guard.as_ref() {
         rt.spawn(async move {
-            info!("Starting FIPS background server with socket path: {}", socket_path);
-            let _: Result<(), String> = start_vpn_internal(&VPN_STATE.inner, None, Some(socket_path)).await;
+            info!("Starting FIPS background server with socket path: {} and tun_fd: {:?}", socket_path, tun_fd_opt);
+            let _: Result<(), String> = start_vpn_internal(&VPN_STATE.inner, tun_fd_opt, Some(socket_path)).await;
         });
     }
 }

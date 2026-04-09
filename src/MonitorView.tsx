@@ -129,121 +129,108 @@ export function MonitorView({ data: initialData, onClose }: MonitorViewProps) {
   };
 
   return (
-    <div className="min-h-screen bg-black text-neutral-200 pb-12 overflow-x-hidden">
-      <div className="mx-auto max-w-7xl space-y-4 px-4 py-4 sm:py-6 overflow-hidden">
-        {/* Header Area */}
-        <div className="border-b border-neutral-900 pb-4 flex flex-col lg:flex-row justify-between items-start gap-4">
-          <div className="w-full lg:w-auto min-w-0">
-            <div className="flex items-center gap-4">
-              <img
-                src="/logo.jpg"
-                alt="FIPS Logo"
-                className="w-12 h-12 rounded-xl border border-neutral-800"
-              />
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-                  Network Monitor
-                </h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs font-mono text-neutral-500">
-                    {data.status?.version || "0.0.0"}
-                  </span>
-                  <span
-                    className={`h-2 w-2 rounded-full ${data.status?.state === "running" ? "bg-green-500 animate-pulse" : "bg-neutral-600"}`}
-                  ></span>
-                  <span className="text-[10px] uppercase text-neutral-500 font-semibold tracking-widest">
-                    {data.status?.state || "stopped"}
-                  </span>
-                  {isFetching && (
-                    <span className="flex items-center gap-1 text-blue-400 text-[10px] uppercase font-bold ml-2">
-                      <span className="w-1 h-1 bg-blue-400 rounded-full animate-ping"></span>
-                      Refreshing
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg text-sm font-bold transition-all border border-red-500/20 whitespace-nowrap"
-            >
-              Close Monitor
-            </button>
+    <div className="mx-auto max-w-7xl space-y-6 px-4 py-4 sm:py-8">
+      {/* Header Area */}
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
+        <div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">
+            Network Monitor
+          </h1>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs font-mono text-neutral-500">
+              {data.status?.version || "0.0.0"}
+            </span>
+            <span
+              className={`h-2 w-2 rounded-full ${data.status?.state === "running" ? "bg-green-500 animate-pulse" : "bg-neutral-600"}`}
+            ></span>
+            <span className="text-[10px] uppercase text-neutral-500 font-semibold tracking-widest">
+              {data.status?.state || "stopped"}
+            </span>
+            {isFetching && (
+              <span className="flex items-center gap-1 text-blue-400 text-[10px] uppercase font-bold ml-2">
+                <span className="w-1 h-1 bg-blue-400 rounded-full animate-ping"></span>
+                Refreshing
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Tabs Area */}
-        <div className="flex items-center gap-2 bg-neutral-900/50 p-2 rounded-xl border border-neutral-800">
-          <button
-            onClick={() => {
-              const idx = tabs.indexOf(activeTab);
-              if (idx > 0) setActiveTab(tabs[idx - 1]);
-            }}
-            disabled={tabs.indexOf(activeTab) === 0}
-            className="p-1.5 rounded-lg bg-neutral-950 text-neutral-400 hover:text-white disabled:opacity-20 transition-all md:hidden border border-neutral-800"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2.5}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
-
-          <div className="flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                id={`tab-${tab}`}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
-                  activeTab === tab
-                    ? "bg-white text-black"
-                    : "text-neutral-500 hover:text-white hover:bg-neutral-800"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={() => {
-              const idx = tabs.indexOf(activeTab);
-              if (idx < tabs.length - 1) setActiveTab(tabs[idx + 1]);
-            }}
-            disabled={tabs.indexOf(activeTab) === tabs.length - 1}
-            className="p-1.5 rounded-lg bg-neutral-950 text-neutral-400 hover:text-white disabled:opacity-20 transition-all md:hidden border border-neutral-800"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2.5}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
-        </div>
-
-        {/* Content Area */}
-        <div className="py-2">{renderContent()}</div>
+        <button
+          onClick={onClose}
+          className="px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg text-sm font-bold transition-all border border-red-500/20 whitespace-nowrap"
+        >
+          Close Monitor
+        </button>
       </div>
+
+      {/* Tabs Area */}
+      <div className="flex items-center gap-2 bg-neutral-900/50 p-2 rounded-xl border border-neutral-800">
+        <button
+          onClick={() => {
+            const idx = tabs.indexOf(activeTab);
+            if (idx > 0) setActiveTab(tabs[idx - 1]);
+          }}
+          disabled={tabs.indexOf(activeTab) === 0}
+          className="p-1.5 rounded-lg bg-neutral-950 text-neutral-400 hover:text-white disabled:opacity-20 transition-all md:hidden border border-neutral-800"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2.5}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+        </button>
+
+        <div className="flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              id={`tab-${tab}`}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+                activeTab === tab
+                  ? "bg-white text-black"
+                  : "text-neutral-500 hover:text-white hover:bg-neutral-800"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => {
+            const idx = tabs.indexOf(activeTab);
+            if (idx < tabs.length - 1) setActiveTab(tabs[idx + 1]);
+          }}
+          disabled={tabs.indexOf(activeTab) === tabs.length - 1}
+          className="p-1.5 rounded-lg bg-neutral-950 text-neutral-400 hover:text-white disabled:opacity-20 transition-all md:hidden border border-neutral-800"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2.5}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {/* Content Area */}
+      <div className="py-2">{renderContent()}</div>
     </div>
   );
 }

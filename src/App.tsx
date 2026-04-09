@@ -293,529 +293,623 @@ function App() {
 
   if (isLoading && !status)
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-neutral-400">
-        Loading FIPS...
+      <div className="h-screen w-screen bg-black flex items-center justify-center text-neutral-400">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="font-bold tracking-widest uppercase text-xs">
+            Loading FIPS...
+          </p>
+        </div>
       </div>
     );
 
-  if (viewMode === "monitor" && !isMobile) {
-    return (
-      <MonitorView data={allData} onClose={() => setViewMode("dashboard")} />
-    );
-  }
-
-  if (viewMode === "settings") {
-    return <ConfigView onClose={() => setViewMode("dashboard")} />;
-  }
-
   return (
-    <div className="min-h-screen bg-black text-neutral-200 pb-12 overflow-x-hidden">
-      <div className="mx-auto max-w-7xl space-y-4 px-4 py-4 sm:py-6 overflow-hidden">
-        {/* Header */}
-        <div className="border-b border-neutral-900 pb-4 flex flex-col lg:flex-row justify-between items-start gap-4">
-          <div className="w-full lg:w-auto min-w-0">
-            <div className="flex items-center gap-4">
-              <img src="/logo.jpg" alt="FIPS Logo" className="w-12 h-12 rounded-xl border border-neutral-800" />
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-                  FIPS
-                </h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs font-mono text-neutral-500">
-                    {status?.version || "0.0.0"}
-                  </span>
-                  <span
-                    className={`h-2 w-2 rounded-full ${status?.state === "running" ? "bg-green-500 animate-pulse" : "bg-neutral-600"}`}
-                  ></span>
-                  <span className="text-[10px] uppercase text-neutral-500 font-semibold tracking-widest">
-                    {status?.state || "stopped"}
-                  </span>
-                </div>
-              </div>
-            </div>
-            {status?.npub && (
-              <div className="mt-3 bg-neutral-900/50 rounded-lg p-2 border border-neutral-800/50 overflow-hidden">
-                <p className="flex items-center gap-2 font-mono text-[10px] sm:text-xs text-neutral-400">
-                  <span className="truncate flex-1 min-w-0">{status.npub}</span>
-                  <CopyButton text={status.npub} />
-                </p>
-                {status?.ipv6_addr && (
-                  <p className="mt-1 flex items-center gap-2 font-mono text-[10px] sm:text-xs text-neutral-500">
-                    <span className="truncate flex-1 min-w-0">
-                      {status.ipv6_addr}
-                    </span>
-                    <CopyButton text={status.ipv6_addr} />
-                  </p>
-                )}
-              </div>
-            )}
+    <div className="h-screen w-screen overflow-hidden bg-black text-neutral-200">
+      <div className="flex h-full w-full flex-col px-[env(safe-area-inset-left)] pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] md:flex-row">
+        {/* Navigation Sidebar/Top-bar */}
+        <nav className="flex h-16 w-full items-center justify-between bg-neutral-900 px-4 py-2 md:h-full md:w-20 md:flex-col md:items-center md:justify-start md:space-y-6 md:px-0 md:py-6 border-b md:border-b-0 md:border-r border-neutral-800 shrink-0">
+          <div className="flex items-center justify-center">
+            <img
+              src="/logo.jpg"
+              alt="FIPS Logo"
+              className="h-10 w-10 rounded-xl border border-neutral-700"
+            />
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+          <div className="flex flex-1 items-center justify-around md:flex-col md:justify-start md:space-y-4 w-full">
             <button
-              onClick={() => setViewMode("settings")}
-              className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-500 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 border border-blue-500 whitespace-nowrap"
+              onClick={() => setViewMode("dashboard")}
+              className={`p-2 rounded-xl transition-all ${viewMode === "dashboard" ? "bg-blue-600 text-white" : "text-neutral-500 hover:text-white hover:bg-neutral-800"}`}
+              title="Dashboard"
             >
-              Settings & Tools
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                />
+              </svg>
             </button>
             {!isMobile && (
               <button
                 onClick={() => setViewMode("monitor")}
-                className="px-4 py-2 bg-neutral-800 text-white hover:bg-neutral-700 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 border border-neutral-700 whitespace-nowrap"
+                className={`p-2 rounded-xl transition-all ${viewMode === "monitor" ? "bg-blue-600 text-white" : "text-neutral-500 hover:text-white hover:bg-neutral-800"}`}
+                title="Monitor"
               >
-                Monitor View
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
               </button>
             )}
-          </div>
-        </div>
-
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-neutral-900/50 border border-neutral-800 p-3 sm:p-4 rounded-xl">
-            <h3 className="text-[10px] sm:text-xs text-neutral-500 uppercase tracking-wider mb-1">
-              Uptime
-            </h3>
-            <p className="text-xl sm:text-2xl font-bold text-white">
-              {formatUptime(status?.uptime_secs)}
-            </p>
-          </div>
-          <div className="bg-neutral-900/50 border border-neutral-800 p-3 sm:p-4 rounded-xl">
-            <h3 className="text-[10px] sm:text-xs text-neutral-500 uppercase tracking-wider mb-1">
-              Peers
-            </h3>
-            <p className="text-xl sm:text-2xl font-bold text-white">
-              {status?.peer_count ?? peers.length}
-            </p>
-          </div>
-          <div className="bg-neutral-900/50 border border-neutral-800 p-3 sm:p-4 rounded-xl">
-            <h3 className="text-[10px] sm:text-xs text-neutral-500 uppercase tracking-wider mb-1">
-              Links
-            </h3>
-            <p className="text-xl sm:text-2xl font-bold text-white">
-              {status?.link_count ?? links.length}
-            </p>
-          </div>
-          <div className="bg-neutral-900/50 border border-neutral-800 p-3 sm:p-4 rounded-xl">
-            <h3 className="text-[10px] sm:text-xs text-neutral-500 uppercase tracking-wider mb-1">
-              Sessions
-            </h3>
-            <p className="text-xl sm:text-2xl font-bold text-white">
-              {status?.session_count ?? sessions.length}
-            </p>
-          </div>
-        </div>
-
-        {/* Detailed Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {status?.forwarding && (
-            <div className="bg-neutral-900/50 border border-neutral-800 p-4 rounded-xl">
-              <h2 className="text-lg font-bold mb-4 text-white flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                Forwarding
-              </h2>
-              <div className="grid grid-cols-2 gap-2">
-                <StatChip
-                  label="Originated"
-                  value={`${formatCount(status.forwarding.originated_packets)} pkts`}
+            <button
+              onClick={() => setViewMode("settings")}
+              className={`p-2 rounded-xl transition-all ${viewMode === "settings" ? "bg-blue-600 text-white" : "text-neutral-500 hover:text-white hover:bg-neutral-800"}`}
+              title="Settings"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
                 />
-                <StatChip
-                  label="Received"
-                  value={`${formatCount(status.forwarding.received_packets)} pkts`}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                 />
-                <StatChip
-                  label="Delivered"
-                  value={`${formatCount(status.forwarding.delivered_packets)} pkts`}
-                />
-                <StatChip
-                  label="Forwarded"
-                  value={`${formatCount(status.forwarding.forwarded_packets)} pkts`}
-                />
-                <div className="col-span-2 grid grid-cols-3 gap-2 mt-2">
-                  <div className="text-center">
-                    <div className="text-[9px] text-neutral-500 uppercase">
-                      No Route
-                    </div>
-                    <div className="text-xs font-semibold text-red-400">
-                      {formatCount(status.forwarding.drop_no_route_packets)}
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-[9px] text-neutral-500 uppercase">
-                      MTU Drop
-                    </div>
-                    <div className="text-xs font-semibold text-red-400">
-                      {formatCount(status.forwarding.drop_mtu_exceeded_packets)}
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-[9px] text-neutral-500 uppercase">
-                      TTL Exp
-                    </div>
-                    <div className="text-xs font-semibold text-orange-400">
-                      {formatCount(status.forwarding.ttl_exhausted_packets)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="bg-neutral-900/50 border border-neutral-800 p-4 rounded-xl">
-            <h2 className="text-lg font-bold mb-4 text-white flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-              Network
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-[10px] text-neutral-500 uppercase tracking-widest mb-1">
-                  TUN Interface
-                </h4>
-                <p className="text-sm font-mono text-white bg-black/50 p-2 rounded border border-neutral-800">
-                  {status?.tun_name || "fips0"}
-                </p>
-              </div>
-              <div>
-                <h4 className="text-[10px] text-neutral-500 uppercase tracking-widest mb-1">
-                  IPv6 MTU
-                </h4>
-                <p className="text-sm font-mono text-white bg-black/50 p-2 rounded border border-neutral-800">
-                  {status?.effective_ipv6_mtu || "1280"}
-                </p>
-              </div>
-              <div className="col-span-2">
-                <h4 className="text-[10px] text-neutral-500 uppercase tracking-widest mb-1">
-                  Est. Mesh Size
-                </h4>
-                <div className="flex items-end gap-2">
-                  <p className="text-2xl font-bold text-white">
-                    {status?.estimated_mesh_size != null
-                      ? formatCount(status.estimated_mesh_size)
-                      : "N/A"}
-                  </p>
-                  <span className="text-xs text-neutral-500 mb-1">nodes</span>
-                </div>
-              </div>
-            </div>
+              </svg>
+            </button>
           </div>
-        </div>
+        </nav>
 
-        {/* Tree Graph */}
-        {tree && (
-          <div className="bg-neutral-900/50 border border-neutral-800 p-4 rounded-xl">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-2">
-              <h2 className="text-xl font-bold text-white">Spanning Tree</h2>
-              {tree.parent_display_name && (
-                <div className="flex items-center gap-2 text-xs bg-black/50 px-3 py-1.5 rounded-full border border-neutral-800">
-                  <span className="text-neutral-500">Parent:</span>
-                  <span className="text-green-400 font-mono font-bold">
-                    {tree.parent_display_name}
-                  </span>
-                  {tree.is_root && (
-                    <span className="bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded text-[10px] font-bold">
-                      ROOT
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto bg-black">
+          {viewMode === "dashboard" && (
+            <div className="mx-auto max-w-7xl px-4 py-4 sm:py-8 space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
+                <div>
+                  <h1 className="text-3xl font-bold text-white tracking-tight">
+                    FIPS
+                  </h1>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs font-mono text-neutral-500">
+                      {status?.version || "0.0.0"}
                     </span>
-                  )}
+                    <span
+                      className={`h-2 w-2 rounded-full ${status?.state === "running" ? "bg-green-500 animate-pulse" : "bg-neutral-600"}`}
+                    ></span>
+                    <span className="text-[10px] uppercase text-neutral-500 font-semibold tracking-widest">
+                      {status?.state || "stopped"}
+                    </span>
+                  </div>
                 </div>
-              )}
-            </div>
-            <div className="w-full">
-              <TreeGraph tree={tree} peers={directPeers} />
-            </div>
-          </div>
-        )}
 
-        {/* Tables Section */}
-        <div className="space-y-6">
-          {/* Peers Table */}
-          {peers.length > 0 && (
-            <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
-              <div className="p-4 border-b border-neutral-800 flex justify-between items-center">
-                <h2 className="text-lg font-bold text-white">Active Peers</h2>
-                <span className="bg-neutral-800 text-neutral-400 px-2 py-1 rounded text-xs font-mono">
-                  {peers.length}
-                </span>
+                {status?.npub && (
+                  <div className="w-full sm:w-auto bg-neutral-900/50 rounded-xl p-3 border border-neutral-800/50">
+                    <p className="flex items-center gap-3 font-mono text-xs text-neutral-400">
+                      <span className="truncate max-w-[200px]">
+                        {status.npub}
+                      </span>
+                      <CopyButton text={status.npub} />
+                    </p>
+                    {status?.ipv6_addr && (
+                      <p className="mt-2 flex items-center gap-3 font-mono text-xs text-neutral-500">
+                        <span className="truncate max-w-[200px]">
+                          {status.ipv6_addr}
+                        </span>
+                        <CopyButton text={status.ipv6_addr} />
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead>
-                    <tr className="text-neutral-500 border-b border-neutral-800 bg-black/20">
-                      <th className="py-3 px-4 font-semibold">Node</th>
-                      <th className="py-3 px-4 font-semibold">Role</th>
-                      <th className="py-3 px-4 font-semibold text-right">
-                        RTT
-                      </th>
-                      <th className="py-3 px-4 font-semibold text-right">
-                        Throughput
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-800/50">
-                    {peers.map((peer, i) => {
-                      const mmp = peer.mmp || {};
-                      const isParent = peer.is_parent;
-                      const isChild = peer.is_child;
-                      const relationship = isParent
-                        ? "parent"
-                        : isChild
-                          ? "child"
-                          : "peer";
 
-                      return (
-                        <tr
-                          key={i}
-                          className="hover:bg-white/5 transition-colors"
-                        >
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-white">
-                              {peer.display_name || "Unknown"}
-                            </div>
-                            <div className="text-[10px] font-mono text-neutral-500 truncate max-w-[120px]">
-                              {peer.npub || "No NPUB"}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <span
-                              className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                                isParent
-                                  ? "bg-green-500/10 text-green-400 border border-green-500/20"
-                                  : isChild
-                                    ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
-                                    : "bg-neutral-800 text-neutral-400"
-                              }`}
-                            >
-                              {relationship}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-right font-mono">
-                            <div
-                              className={
-                                mmp.srtt_ms != null
-                                  ? mmp.srtt_ms < 100
-                                    ? "text-green-400"
-                                    : mmp.srtt_ms < 300
-                                      ? "text-amber-400"
-                                      : "text-red-400"
-                                  : "text-neutral-500"
-                              }
-                            >
-                              {mmp.srtt_ms != null
-                                ? `${Math.round(mmp.srtt_ms)}ms`
-                                : "—"}
-                            </div>
-                            <div className="text-[10px] text-neutral-500">
-                              {formatPercent(
-                                mmp.smoothed_loss ?? mmp.loss_rate,
-                              )}{" "}
-                              loss
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <div className="text-white font-mono">
-                              {mmp.goodput_bps != null
-                                ? formatThroughput(mmp.goodput_bps)
-                                : "—"}
-                            </div>
-                            <div className="text-[10px] text-neutral-500">
-                              ETX: {formatFloat(mmp.etx)}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              {/* Quick Stats Grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="bg-neutral-900/50 border border-neutral-800 p-3 sm:p-4 rounded-xl">
+                  <h3 className="text-[10px] sm:text-xs text-neutral-500 uppercase tracking-wider mb-1">
+                    Uptime
+                  </h3>
+                  <p className="text-xl sm:text-2xl font-bold text-white">
+                    {formatUptime(status?.uptime_secs)}
+                  </p>
+                </div>
+                <div className="bg-neutral-900/50 border border-neutral-800 p-3 sm:p-4 rounded-xl">
+                  <h3 className="text-[10px] sm:text-xs text-neutral-500 uppercase tracking-wider mb-1">
+                    Peers
+                  </h3>
+                  <p className="text-xl sm:text-2xl font-bold text-white">
+                    {status?.peer_count ?? peers.length}
+                  </p>
+                </div>
+                <div className="bg-neutral-900/50 border border-neutral-800 p-3 sm:p-4 rounded-xl">
+                  <h3 className="text-[10px] sm:text-xs text-neutral-500 uppercase tracking-wider mb-1">
+                    Links
+                  </h3>
+                  <p className="text-xl sm:text-2xl font-bold text-white">
+                    {status?.link_count ?? links.length}
+                  </p>
+                </div>
+                <div className="bg-neutral-900/50 border border-neutral-800 p-3 sm:p-4 rounded-xl">
+                  <h3 className="text-[10px] sm:text-xs text-neutral-500 uppercase tracking-wider mb-1">
+                    Sessions
+                  </h3>
+                  <p className="text-xl sm:text-2xl font-bold text-white">
+                    {status?.session_count ?? sessions.length}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* Links Table */}
-          {links.length > 0 && (
-            <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
-              <div className="p-4 border-b border-neutral-800 flex justify-between items-center">
-                <h2 className="text-lg font-bold text-white">Active Links</h2>
-                <span className="bg-neutral-800 text-neutral-400 px-2 py-1 rounded text-xs font-mono">
-                  {links.length}
-                </span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead>
-                    <tr className="text-neutral-500 border-b border-neutral-800 bg-black/20">
-                      <th className="py-3 px-4 font-semibold">Link ID</th>
-                      <th className="py-3 px-4 font-semibold">State</th>
-                      <th className="py-3 px-4 font-semibold text-right">
-                        Last Seen
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-800/50">
-                    {links.map((link, i) => (
-                      <tr
-                        key={i}
-                        className="hover:bg-white/5 transition-colors"
-                      >
-                        <td className="py-3 px-4 font-mono text-white">
-                          #{link.link_id}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400 font-bold uppercase tracking-widest">
-                            {link.state}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right text-neutral-400 font-mono text-xs">
-                          {formatRelativeTime(link.last_recv_ms)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Sessions Table */}
-          {sessions.length > 0 && (
-            <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
-              <div className="p-4 border-b border-neutral-800">
-                <h2 className="text-lg font-bold text-white">Sessions</h2>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead>
-                    <tr className="text-neutral-500 border-b border-neutral-800 bg-black/20">
-                      <th className="py-3 px-4 font-semibold">Session</th>
-                      <th className="py-3 px-4 font-semibold">State</th>
-                      <th className="py-3 px-4 font-semibold text-right">
-                        Usage
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-800/50">
-                    {sessions.map((session, i) => (
-                      <tr
-                        key={i}
-                        className="hover:bg-white/5 transition-colors"
-                      >
-                        <td className="py-3 px-4">
-                          <div className="font-bold text-white">
-                            {session.display_name || "Unnamed"}
+              {/* Detailed Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {status?.forwarding && (
+                  <div className="bg-neutral-900/50 border border-neutral-800 p-4 rounded-xl">
+                    <h2 className="text-lg font-bold mb-4 text-white flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                      Forwarding
+                    </h2>
+                    <div className="grid grid-cols-2 gap-2">
+                      <StatChip
+                        label="Originated"
+                        value={`${formatCount(status.forwarding.originated_packets)} pkts`}
+                      />
+                      <StatChip
+                        label="Received"
+                        value={`${formatCount(status.forwarding.received_packets)} pkts`}
+                      />
+                      <StatChip
+                        label="Delivered"
+                        value={`${formatCount(status.forwarding.delivered_packets)} pkts`}
+                      />
+                      <StatChip
+                        label="Forwarded"
+                        value={`${formatCount(status.forwarding.forwarded_packets)} pkts`}
+                      />
+                      <div className="col-span-2 grid grid-cols-3 gap-2 mt-2">
+                        <div className="text-center">
+                          <div className="text-[9px] text-neutral-500 uppercase">
+                            No Route
                           </div>
-                          {session.is_initiator && (
-                            <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1 rounded uppercase font-bold">
-                              Initiator
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-xs font-mono">
-                          {session.state}
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="text-white font-mono">
-                            {formatBytes(
-                              session.bytes_sent + session.bytes_recv,
+                          <div className="text-xs font-semibold text-red-400">
+                            {formatCount(
+                              status.forwarding.drop_no_route_packets,
                             )}
                           </div>
-                          <div className="text-[10px] text-neutral-500">
-                            {formatCount(
-                              session.packets_sent + session.packets_recv,
-                            )}{" "}
-                            pkts
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Transports */}
-          {transports.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="text-lg font-bold text-white px-1">Transports</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {transports.map((transport, i) => {
-                  const stats = transport.stats || {};
-                  const sendErrors = stats.send_errors || 0;
-                  const label = transport.name
-                    ? `${transport.type} ${transport.name}`
-                    : transport.type === "tor"
-                      ? `tor(${transport.tor_mode || "socks5"})`
-                      : `${transport.type} #${transport.transport_id}`;
-
-                  return (
-                    <div
-                      key={i}
-                      className="bg-neutral-900/50 border border-neutral-800 p-4 rounded-xl"
-                    >
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="min-w-0 flex-1">
-                          <span className="text-xs font-black uppercase bg-white text-black px-2 py-0.5 rounded mr-2 whitespace-nowrap">
-                            {transport.type}
-                          </span>
-                          <span className="text-[10px] font-mono text-neutral-500 truncate block sm:inline mt-1 sm:mt-0">
-                            {label}
-                          </span>
                         </div>
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ml-2 ${transport.state === "up" || transport.state === "running" ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}
-                        >
-                          {transport.state}
+                        <div className="text-center">
+                          <div className="text-[9px] text-neutral-500 uppercase">
+                            MTU Drop
+                          </div>
+                          <div className="text-xs font-semibold text-red-400">
+                            {formatCount(
+                              status.forwarding.drop_mtu_exceeded_packets,
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-[9px] text-neutral-500 uppercase">
+                            TTL Exp
+                          </div>
+                          <div className="text-xs font-semibold text-orange-400">
+                            {formatCount(
+                              status.forwarding.ttl_exhausted_packets,
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-neutral-900/50 border border-neutral-800 p-4 rounded-xl">
+                  <h2 className="text-lg font-bold mb-4 text-white flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                    Network
+                  </h2>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="text-[10px] text-neutral-500 uppercase tracking-widest mb-1">
+                        TUN Interface
+                      </h4>
+                      <p className="text-sm font-mono text-white bg-black/50 p-2 rounded border border-neutral-800">
+                        {status?.tun_name || "fips0"}
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="text-[10px] text-neutral-500 uppercase tracking-widest mb-1">
+                        IPv6 MTU
+                      </h4>
+                      <p className="text-sm font-mono text-white bg-black/50 p-2 rounded border border-neutral-800">
+                        {status?.effective_ipv6_mtu || "1280"}
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      <h4 className="text-[10px] text-neutral-500 uppercase tracking-widest mb-1">
+                        Est. Mesh Size
+                      </h4>
+                      <div className="flex items-end gap-2">
+                        <p className="text-2xl font-bold text-white">
+                          {status?.estimated_mesh_size != null
+                            ? formatCount(status.estimated_mesh_size)
+                            : "N/A"}
+                        </p>
+                        <span className="text-xs text-neutral-500 mb-1">
+                          nodes
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <div className="text-[9px] text-neutral-500 uppercase">
-                            Throughput
-                          </div>
-                          <div className="text-xs font-mono">
-                            {formatBytes(
-                              (stats.bytes_sent || 0) + (stats.bytes_recv || 0),
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-[9px] text-neutral-500 uppercase">
-                            Packets
-                          </div>
-                          <div className="text-xs font-mono">
-                            {formatCount(
-                              (stats.packets_sent || stats.frames_sent || 0) +
-                                (stats.packets_recv || stats.frames_recv || 0),
-                            )}
-                          </div>
-                        </div>
-                        {sendErrors > 0 && (
-                          <div className="col-span-2 text-[10px] text-red-400 bg-red-400/5 p-1 rounded">
-                            ⚠️ {sendErrors} send errors detected
-                          </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tree Graph */}
+              {tree && (
+                <div className="bg-neutral-900/50 border border-neutral-800 p-4 rounded-xl">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-2">
+                    <h2 className="text-xl font-bold text-white">
+                      Spanning Tree
+                    </h2>
+                    {tree.parent_display_name && (
+                      <div className="flex items-center gap-2 text-xs bg-black/50 px-3 py-1.5 rounded-full border border-neutral-800">
+                        <span className="text-neutral-500">Parent:</span>
+                        <span className="text-green-400 font-mono font-bold">
+                          {tree.parent_display_name}
+                        </span>
+                        {tree.is_root && (
+                          <span className="bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded text-[10px] font-bold">
+                            ROOT
+                          </span>
                         )}
                       </div>
+                    )}
+                  </div>
+                  <div className="w-full">
+                    <TreeGraph tree={tree} peers={directPeers} />
+                  </div>
+                </div>
+              )}
+
+              {/* Tables Section */}
+              <div className="space-y-6">
+                {/* Peers Table */}
+                {peers.length > 0 && (
+                  <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                    <div className="p-4 border-b border-neutral-800 flex justify-between items-center">
+                      <h2 className="text-lg font-bold text-white">
+                        Active Peers
+                      </h2>
+                      <span className="bg-neutral-800 text-neutral-400 px-2 py-1 rounded text-xs font-mono">
+                        {peers.length}
+                      </span>
                     </div>
-                  );
-                })}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm border-collapse">
+                        <thead>
+                          <tr className="text-neutral-500 border-b border-neutral-800 bg-black/20">
+                            <th className="py-3 px-4 font-semibold">Node</th>
+                            <th className="py-3 px-4 font-semibold">Role</th>
+                            <th className="py-3 px-4 font-semibold text-right">
+                              RTT
+                            </th>
+                            <th className="py-3 px-4 font-semibold text-right">
+                              Throughput
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-800/50">
+                          {peers.map((peer, i) => {
+                            const mmp = peer.mmp || {};
+                            const isParent = peer.is_parent;
+                            const isChild = peer.is_child;
+                            const relationship = isParent
+                              ? "parent"
+                              : isChild
+                                ? "child"
+                                : "peer";
+
+                            return (
+                              <tr
+                                key={i}
+                                className="hover:bg-white/5 transition-colors"
+                              >
+                                <td className="py-3 px-4">
+                                  <div className="font-bold text-white">
+                                    {peer.display_name || "Unknown"}
+                                  </div>
+                                  <div className="text-[10px] font-mono text-neutral-500 truncate max-w-[120px]">
+                                    {peer.npub || "No NPUB"}
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span
+                                    className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                                      isParent
+                                        ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                                        : isChild
+                                          ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                                          : "bg-neutral-800 text-neutral-400"
+                                    }`}
+                                  >
+                                    {relationship}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-right font-mono">
+                                  <div
+                                    className={
+                                      mmp.srtt_ms != null
+                                        ? mmp.srtt_ms < 100
+                                          ? "text-green-400"
+                                          : mmp.srtt_ms < 300
+                                            ? "text-amber-400"
+                                            : "text-red-400"
+                                        : "text-neutral-500"
+                                    }
+                                  >
+                                    {mmp.srtt_ms != null
+                                      ? `${Math.round(mmp.srtt_ms)}ms`
+                                      : "—"}
+                                  </div>
+                                  <div className="text-[10px] text-neutral-500">
+                                    {formatPercent(
+                                      mmp.smoothed_loss ?? mmp.loss_rate,
+                                    )}{" "}
+                                    loss
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  <div className="text-white font-mono">
+                                    {mmp.goodput_bps != null
+                                      ? formatThroughput(mmp.goodput_bps)
+                                      : "—"}
+                                  </div>
+                                  <div className="text-[10px] text-neutral-500">
+                                    ETX: {formatFloat(mmp.etx)}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Links Table */}
+                {links.length > 0 && (
+                  <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                    <div className="p-4 border-b border-neutral-800 flex justify-between items-center">
+                      <h2 className="text-lg font-bold text-white">
+                        Active Links
+                      </h2>
+                      <span className="bg-neutral-800 text-neutral-400 px-2 py-1 rounded text-xs font-mono">
+                        {links.length}
+                      </span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm border-collapse">
+                        <thead>
+                          <tr className="text-neutral-500 border-b border-neutral-800 bg-black/20">
+                            <th className="py-3 px-4 font-semibold">Link ID</th>
+                            <th className="py-3 px-4 font-semibold">State</th>
+                            <th className="py-3 px-4 font-semibold text-right">
+                              Last Seen
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-800/50">
+                          {links.map((link, i) => (
+                            <tr
+                              key={i}
+                              className="hover:bg-white/5 transition-colors"
+                            >
+                              <td className="py-3 px-4 font-mono text-white">
+                                #{link.link_id}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400 font-bold uppercase tracking-widest">
+                                  {link.state}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-right text-neutral-400 font-mono text-xs">
+                                {formatRelativeTime(link.last_recv_ms)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sessions Table */}
+                {sessions.length > 0 && (
+                  <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                    <div className="p-4 border-b border-neutral-800">
+                      <h2 className="text-lg font-bold text-white">Sessions</h2>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm border-collapse">
+                        <thead>
+                          <tr className="text-neutral-500 border-b border-neutral-800 bg-black/20">
+                            <th className="py-3 px-4 font-semibold">Session</th>
+                            <th className="py-3 px-4 font-semibold">State</th>
+                            <th className="py-3 px-4 font-semibold text-right">
+                              Usage
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-800/50">
+                          {sessions.map((session, i) => (
+                            <tr
+                              key={i}
+                              className="hover:bg-white/5 transition-colors"
+                            >
+                              <td className="py-3 px-4">
+                                <div className="font-bold text-white">
+                                  {session.display_name || "Unnamed"}
+                                </div>
+                                {session.is_initiator && (
+                                  <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1 rounded uppercase font-bold">
+                                    Initiator
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-xs font-mono">
+                                {session.state}
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <div className="text-white font-mono">
+                                  {formatBytes(
+                                    session.bytes_sent + session.bytes_recv,
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-neutral-500">
+                                  {formatCount(
+                                    session.packets_sent + session.packets_recv,
+                                  )}{" "}
+                                  pkts
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Transports */}
+                {transports.length > 0 && (
+                  <div className="space-y-3 pb-8">
+                    <h2 className="text-lg font-bold text-white px-1">
+                      Transports
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {transports.map((transport, i) => {
+                        const stats = transport.stats || {};
+                        const sendErrors = stats.send_errors || 0;
+                        const label = transport.name
+                          ? `${transport.type} ${transport.name}`
+                          : transport.type === "tor"
+                            ? `tor(${transport.tor_mode || "socks5"})`
+                            : `${transport.type} #${transport.transport_id}`;
+
+                        return (
+                          <div
+                            key={i}
+                            className="bg-neutral-900/50 border border-neutral-800 p-4 rounded-xl"
+                          >
+                            <div className="flex justify-between items-start mb-4">
+                              <div className="min-w-0 flex-1">
+                                <span className="text-xs font-black uppercase bg-white text-black px-2 py-0.5 rounded mr-2 whitespace-nowrap">
+                                  {transport.type}
+                                </span>
+                                <span className="text-[10px] font-mono text-neutral-500 truncate block sm:inline mt-1 sm:mt-0">
+                                  {label}
+                                </span>
+                              </div>
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ml-2 ${transport.state === "up" || transport.state === "running" ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}
+                              >
+                                {transport.state}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <div className="text-[9px] text-neutral-500 uppercase">
+                                  Throughput
+                                </div>
+                                <div className="text-xs font-mono">
+                                  {formatBytes(
+                                    (stats.bytes_sent || 0) +
+                                      (stats.bytes_recv || 0),
+                                  )}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-[9px] text-neutral-500 uppercase">
+                                  Packets
+                                </div>
+                                <div className="text-xs font-mono">
+                                  {formatCount(
+                                    (stats.packets_sent ||
+                                      stats.frames_sent ||
+                                      0) +
+                                      (stats.packets_recv ||
+                                        stats.frames_recv ||
+                                        0),
+                                  )}
+                                </div>
+                              </div>
+                              {sendErrors > 0 && (
+                                <div className="col-span-2 text-[10px] text-red-400 bg-red-400/5 p-1 rounded">
+                                  ⚠️ {sendErrors} send errors detected
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {!isLoading &&
+                  peers.length === 0 &&
+                  links.length === 0 &&
+                  sessions.length === 0 &&
+                  transports.length === 0 &&
+                  !tree && (
+                    <div className="text-center py-20 bg-neutral-900/30 border border-dashed border-neutral-800 rounded-2xl">
+                      <div className="text-4xl mb-4">🕸️</div>
+                      <h3 className="text-lg font-bold text-white">
+                        No Network Activity
+                      </h3>
+                      <p className="text-neutral-500 text-sm mt-1">
+                        Make sure the FIPS service is running and connected.
+                      </p>
+                    </div>
+                  )}
               </div>
             </div>
           )}
-        </div>
 
-        {/* Empty State */}
-        {!isLoading &&
-          peers.length === 0 &&
-          links.length === 0 &&
-          sessions.length === 0 &&
-          transports.length === 0 &&
-          !tree && (
-            <div className="text-center py-20 bg-neutral-900/30 border border-dashed border-neutral-800 rounded-2xl">
-              <div className="text-4xl mb-4">🕸️</div>
-              <h3 className="text-lg font-bold text-white">
-                No Network Activity
-              </h3>
-              <p className="text-neutral-500 text-sm mt-1">
-                Make sure the FIPS service is running and connected.
-              </p>
-            </div>
+          {viewMode === "monitor" && (
+            <MonitorView
+              data={allData}
+              onClose={() => setViewMode("dashboard")}
+            />
           )}
+
+          {viewMode === "settings" && (
+            <ConfigView onClose={() => setViewMode("dashboard")} />
+          )}
+        </div>
       </div>
     </div>
   );

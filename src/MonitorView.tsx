@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 interface MonitorViewProps {
   data: any;
@@ -446,6 +447,17 @@ function formatThroughput(val: number): string {
 
 function PeersTab({ data }: { data: any }) {
   const peers = [...(data.peers || [])];
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  const copyToClipboard = async (text: string, index: number) => {
+    try {
+      await writeText(text);
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy npub:", err);
+    }
+  };
 
   // Sort by LQI ascending (best first) like fipstop
   peers.sort((a, b) => {
@@ -497,8 +509,45 @@ function PeersTab({ data }: { data: any }) {
                   <td className="pl-5 pr-4 py-2 font-bold whitespace-nowrap">
                     {peer.display_name || "-"}
                   </td>
-                  <td className="pr-4 py-2 opacity-70 truncate max-w-[200px]">
-                    {peer.npub || "-"}
+                  <td className="pr-4 py-2 opacity-70 truncate max-w-[200px] flex items-center gap-2">
+                    <span className="truncate">{peer.npub || "-"}</span>
+                    {peer.npub && (
+                      <button
+                        onClick={() => copyToClipboard(peer.npub, i)}
+                        className="p-1 hover:bg-white/10 rounded transition-all text-neutral-400 hover:text-white"
+                        title="Copy Npub"
+                      >
+                        {copiedIndex === i ? (
+                          <svg
+                            className="w-3.5 h-3.5 text-green-500"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2.5}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        ) : (
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                            />
+                          </svg>
+                        )}
+                      </button>
+                    )}
                   </td>
                   <td className="pr-4 py-2 whitespace-nowrap">{transport}</td>
                   <td className="pr-4 py-2">

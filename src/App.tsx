@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useQuery } from "@tanstack/react-query";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { TreeGraph, type DirectPeer } from "./TreeGraph";
 import { MonitorView } from "./MonitorView";
 import { ConfigView } from "./ConfigView";
@@ -225,20 +226,57 @@ function formatFloat(value: number | null | undefined, decimals = 2): string {
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
-  if (!navigator.clipboard) return null;
   function handleClick() {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
+    writeText(text)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      })
+      .catch((err) => {
+        console.error("Failed to copy:", err);
+      });
   }
   return (
     <button
       onClick={handleClick}
       title="Copy"
-      className="ml-1 rounded px-1 py-0.5 text-xs text-neutral-400 hover:bg-neutral-700 hover:text-white transition-colors"
+      className="ml-1 rounded px-1 py-0.5 text-xs text-neutral-400 hover:bg-neutral-700 hover:text-white transition-colors flex items-center gap-1"
     >
-      {copied ? "Copied" : "Copy"}
+      {copied ? (
+        <>
+          <svg
+            className="w-3 h-3 text-green-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2.5}
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+          <span className="text-[10px] text-green-500 font-bold">Copied</span>
+        </>
+      ) : (
+        <>
+          <svg
+            className="w-3 h-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+            />
+          </svg>
+          <span>Copy</span>
+        </>
+      )}
     </button>
   );
 }
@@ -264,11 +302,30 @@ function App() {
   // Check if we're on a mobile device
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  const { data: allData, isLoading } = useQuery({
+  const { data: allData, isLoading, refetch } = useQuery({
     queryKey: ["fipsInfo"],
     queryFn: () => invoke<any>("get_info"),
     refetchInterval: 5000,
   });
+
+  const [connecting, setConnecting] = useState(false);
+
+  async function toggleVpn() {
+    setConnecting(true);
+    try {
+      if (status?.state === "running") {
+        await invoke("stop_vpn");
+      } else {
+        await invoke("start_vpn", { tunFd: null });
+      }
+      refetch();
+    } catch (e) {
+      console.error("VPN toggle failed:", e);
+      alert(`Operation failed: ${e}`);
+    } finally {
+      setConnecting(false);
+    }
+  }
 
   const status: StatusData | null = allData?.status || null;
   const peers: Peer[] = Array.isArray(allData?.peers) ? allData.peers : [];
@@ -407,24 +464,34 @@ function App() {
                   </div>
                 </div>
 
-                {status?.npub && (
-                  <div className="w-full sm:w-auto bg-neutral-900/50 rounded-xl p-3 border border-neutral-800/50">
-                    <p className="flex items-center gap-3 font-mono text-xs text-neutral-400">
-                      <span className="truncate max-w-[200px]">
-                        {status.npub}
-                      </span>
-                      <CopyButton text={status.npub} />
-                    </p>
-                    {status?.ipv6_addr && (
-                      <p className="mt-2 flex items-center gap-3 font-mono text-xs text-neutral-500">
-                        <span className="truncate max-w-[200px]">
-                          {status.ipv6_addr}
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={toggleVpn}
+                    disabled={connecting}
+                    className={`px-6 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${
+                      status?.state === "running"
+                        ? "bg-red-600 text-white hover:bg-red-500"
+                        : "bg-blue-600 text-white hover:bg-blue-500"
+                    } disabled:opacity-50`}
+                  >
+                    {connecting
+                      ? "Processing..."
+                      : status?.state === "running"
+                        ? "Disconnect"
+                        : "Connect"}
+                  </button>
+
+                  {status?.npub && (
+                    <div className="bg-neutral-900/50 rounded-xl p-2 px-3 border border-neutral-800/50">
+                      <p className="flex items-center gap-3 font-mono text-[10px] text-neutral-400">
+                        <span className="truncate max-w-[120px]">
+                          {status.npub}
                         </span>
-                        <CopyButton text={status.ipv6_addr} />
+                        <CopyButton text={status.npub} />
                       </p>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Quick Stats Grid */}
@@ -639,8 +706,13 @@ function App() {
                                   <div className="font-bold text-white">
                                     {peer.display_name || "Unknown"}
                                   </div>
-                                  <div className="text-[10px] font-mono text-neutral-500 truncate max-w-[120px]">
-                                    {peer.npub || "No NPUB"}
+                                  <div className="text-[10px] font-mono text-neutral-500 flex items-center gap-1">
+                                    <span className="truncate max-w-[120px]">
+                                      {peer.npub || "No NPUB"}
+                                    </span>
+                                    {peer.npub && (
+                                      <CopyButton text={peer.npub} />
+                                    )}
                                   </div>
                                 </td>
                                 <td className="py-3 px-4">
@@ -888,11 +960,18 @@ function App() {
                     <div className="text-center py-20 bg-neutral-900/30 border border-dashed border-neutral-800 rounded-2xl">
                       <div className="text-4xl mb-4">🕸️</div>
                       <h3 className="text-lg font-bold text-white">
-                        No Network Activity
+                        Node is Stopped
                       </h3>
-                      <p className="text-neutral-500 text-sm mt-1">
-                        Make sure the FIPS service is running and connected.
+                      <p className="text-neutral-500 text-sm mt-1 mb-8">
+                        Click the button below to start the FIPS mesh node.
                       </p>
+                      <button
+                        onClick={toggleVpn}
+                        disabled={connecting}
+                        className="px-10 py-4 bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 rounded-2xl text-lg font-black uppercase tracking-widest transition-all shadow-xl shadow-blue-900/20"
+                      >
+                        {connecting ? "Starting..." : "Start FIPS Node"}
+                      </button>
                     </div>
                   )}
               </div>

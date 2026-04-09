@@ -6,9 +6,7 @@ use std::sync::Arc;
 use tauri::State;
 use tokio::sync::{mpsc, Mutex};
 
-macro_rules! info { ($($arg:tt)*) => { println!($($arg)*) } }
-macro_rules! warn { ($($arg:tt)*) => { eprintln!($($arg)*) } }
-macro_rules! error { ($($arg:tt)*) => { eprintln!($($arg)*) } }
+use tracing::{info, warn, error};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -171,7 +169,15 @@ async fn start_vpn_internal(state: &Arc<VpnStateInner>, tun_fd: Option<i32>) -> 
     config.dns.port = Some(app_config.dns.port);
 
     config.node.control.enabled = true;
-    config.node.control.socket_path = "/tmp/fips-control.sock".to_string();
+    #[cfg(target_os = "android")]
+    {
+        // Use a path in the internal data directory that we know is writeable
+        config.node.control.socket_path = "/data/data/com.fips.app/fips-control.sock".to_string();
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        config.node.control.socket_path = "/tmp/fips-control.sock".to_string();
+    }
 
     if app_config.transports.udp_enabled {
         config.transports.udp = TransportInstances::Single(fips::config::UdpConfig {

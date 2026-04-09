@@ -15,9 +15,13 @@ crate-type = ["lib", "cdylib", "staticlib"]
 [dependencies]
 tauri = { version = "2", features = ["devtools"] }
 tauri-plugin-shell = "2"
+tauri-plugin-clipboard-manager = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1.40", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["registry"] }
+tracing-android = "0.2"
 fips = { path = "../../fips", default-features = false }
 
 [target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]

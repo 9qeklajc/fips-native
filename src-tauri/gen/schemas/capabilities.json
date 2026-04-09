@@ -1,1 +1,1 @@
-{}
+{"main-capability":{"identifier":"main-capability","description":"Main capability for the FIPS application","local":true,"windows":["main"],"permissions":["core:default","shell:default","clipboard-manager:allow-write-text","clipboard-manager:allow-read-text"]}}

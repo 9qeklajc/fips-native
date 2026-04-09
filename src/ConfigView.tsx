@@ -147,27 +147,17 @@ export function ConfigView({ onClose }: ConfigViewProps) {
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
           <button
-            onClick={() => {
-              if (config) {
-                invoke("update_config", { config });
-              }
-            }}
-            className="px-4 py-2 bg-amber-600/20 text-amber-500 hover:bg-amber-600 hover:text-white rounded-lg text-sm font-bold transition-all border border-amber-500/20 whitespace-nowrap"
+            onClick={saveConfig}
+            disabled={saving}
+            className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 rounded-lg text-sm font-bold transition-all whitespace-nowrap"
           >
-            Restart Only
+            {saving ? "Saving..." : "Save & Restart"}
           </button>
           <button
             onClick={onClose}
             className="px-4 py-2 bg-neutral-800 text-white hover:bg-neutral-700 rounded-lg text-sm font-bold transition-all border border-neutral-700 whitespace-nowrap"
           >
             Cancel
-          </button>
-          <button
-            onClick={saveConfig}
-            disabled={saving}
-            className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 rounded-lg text-sm font-bold transition-all whitespace-nowrap"
-          >
-            {saving ? "Saving..." : "Save & Restart"}
           </button>
         </div>
       </div>
@@ -188,7 +178,7 @@ export function ConfigView({ onClose }: ConfigViewProps) {
             <h4 className="text-sm font-bold text-white mb-4">Mesh Ping</h4>
             <p className="text-xs text-neutral-500 mb-4">
               Send an ICMPv6 Echo Request to a node in the mesh via its NPUB or
-              Node Address.
+              Node Address. (Do not add .fips suffix)
             </p>
             <div className="flex gap-2">
               <input
@@ -209,7 +199,9 @@ export function ConfigView({ onClose }: ConfigViewProps) {
             {pingResult && (
               <div className="mt-4 p-3 bg-black/50 border border-neutral-800 rounded-lg font-mono text-[11px]">
                 <pre className="whitespace-pre-wrap text-neutral-300">
-                  {JSON.stringify(pingResult, null, 2)}
+                  {typeof pingResult === "string"
+                    ? pingResult
+                    : JSON.stringify(pingResult, null, 2)}
                 </pre>
               </div>
             )}

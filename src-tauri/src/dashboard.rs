@@ -10,6 +10,7 @@ const CONTROL_SOCKETS: &[&str] = &[
     "/var/run/fips/control.sock",
     "/run/fips/control.sock",
     "/tmp/fips-control.sock",
+    "/data/data/com.fips.app/fips-control.sock",
 ];
 
 async fn fipsctl_socket(command: &str, params: Option<Value>) -> Result<Value, String> {
@@ -169,6 +170,66 @@ pub async fn explore_mesh(state: State<'_, VpnState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn ping_node(state: State<'_, VpnState>, target: String) -> Result<Value, String> {
-    fipsctl(&state, "ping", Some(json!({ "target": target }))).await
+pub async fn ping_node(_state: State<'_, VpnState>, target: String) -> Result<Value, String> {
+    let ping_target = if target.starts_with("npub") {
+        match fips::identity::PeerIdentity::from_npub(&target) {
+            Ok(id) => id.address().to_string(),
+            Err(e) => return Err(format!("Invalid npub: {}", e)),
+        }
+    } else {
+        target
+    };
+
+    #[cfg(target_os = "macos")]
+    {
+        let output = tokio::process::Command::new("ping6")
+            .arg("-c")
+            .arg("4")
+            .arg(&ping_target)
+            .output()
+            .await;
+
+        if let Ok(out) = output {
+            let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+            return Ok(json!(format!("{}{}", stdout, stderr)));
+        } else if let Err(e) = output {
+            return Err(format!("Failed to execute ping6: {}", e));
+        }
+    }
+
+    #[cfg(target_os = "android")]
+    {
+        let output = tokio::process::Command::new("ping")
+            .arg("-c")
+            .arg("4")
+            .arg(&ping_target)
+            .output()
+            .await;
+
+        if let Ok(out) = output {
+            let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+            return Ok(json!(format!("{}{}", stdout, stderr)));
+        } else if let Err(e) = output {
+            return Err(format!("Failed to execute ping: {}", e));
+        }
+    }
+
+    // Fallback for other platforms (e.g. Linux)
+    let output = tokio::process::Command::new("ping")
+        .arg("-c")
+        .arg("4")
+        .arg(&ping_target)
+        .output()
+        .await;
+
+    match output {
+        Ok(out) => {
+            let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+            Ok(json!(format!("{}{}", stdout, stderr)))
+        }
+        Err(e) => Err(format!("Failed to execute ping: {}", e)),
+    }
 }

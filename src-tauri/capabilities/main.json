@@ -1,0 +1,11 @@
+{
+  "identifier": "main-capability",
+  "description": "Main capability for the FIPS application",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:default",
+    "clipboard-manager:allow-write-text",
+    "clipboard-manager:allow-read-text"
+  ]
+}

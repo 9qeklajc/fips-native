@@ -15,9 +15,13 @@ pub fn run() {
             dashboard::get_info,
             dashboard::get_monitor_data,
             dashboard::explore_mesh,
+            dashboard::ping_node,
             vpn::start_vpn,
-            vpn::stop_vpn
+            vpn::stop_vpn,
+            vpn::get_config,
+            vpn::update_config
         ])
+        .manage(vpn::VpnState::new())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

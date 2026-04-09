@@ -3,3 +3,4 @@ target
 node_modules
 dist
 releases
+src-tauri/gen/android/app/release.keystore

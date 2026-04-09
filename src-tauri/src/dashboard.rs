@@ -129,3 +129,50 @@ pub async fn get_monitor_data(tab: String) -> Result<Value, String> {
 pub async fn explore_mesh() -> Result<(), String> {
     fipsctl("explore").await.map(|_| ())
 }
+
+#[tauri::command]
+pub async fn ping_node(target: String) -> Result<Value, String> {
+    fipsctl_with_params("ping", json!({ "target": target })).await
+}
+
+async fn fipsctl_with_params(command: &str, params: Value) -> Result<Value, String> {
+    let mut stream = None;
+    for path in CONTROL_SOCKETS {
+        if let Ok(s) = UnixStream::connect(path).await {
+            stream = Some(s);
+            break;
+        }
+    }
+
+    let mut stream = stream.ok_or_else(|| {
+        format!(
+            "Failed to connect to control socket (tried: {})",
+            CONTROL_SOCKETS.join(", ")
+        )
+    })?;
+
+    let request = json!({
+        "command": command,
+        "params": params
+    });
+
+    let req_str = serde_json::to_string(&request).unwrap() + "\n";
+    stream.write_all(req_str.as_bytes())
+        .await
+        .map_err(|e| format!("Failed to write to control socket: {}", e))?;
+
+    let mut reader = BufReader::new(stream);
+    let mut response_line = String::new();
+    reader.read_line(&mut response_line)
+        .await
+        .map_err(|e| format!("Failed to read from control socket: {}", e))?;
+
+    let response: Value = serde_json::from_str(&response_line)
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    if response["status"] == "ok" {
+        Ok(response["data"].clone())
+    } else {
+        Err(response["message"].as_str().unwrap_or("Unknown error").to_string())
+    }
+}

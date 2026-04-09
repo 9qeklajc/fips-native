@@ -1,10 +1,10 @@
-use serde_json::{json, Value};
-use tokio::sync::oneshot;
-use tauri::State;
 use crate::vpn::VpnState;
 use fips::control::protocol::Request;
+use serde_json::{json, Value};
+use tauri::State;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
+use tokio::sync::oneshot;
 
 const CONTROL_SOCKETS: &[&str] = &[
     "/var/run/fips/control.sock",
@@ -35,13 +35,15 @@ async fn fipsctl_socket(command: &str, params: Option<Value>) -> Result<Value, S
     });
 
     let req_str = serde_json::to_string(&request).unwrap() + "\n";
-    stream.write_all(req_str.as_bytes())
+    stream
+        .write_all(req_str.as_bytes())
         .await
         .map_err(|e| format!("Failed to write to control socket: {}", e))?;
 
     let mut reader = BufReader::new(stream);
     let mut response_line = String::new();
-    reader.read_line(&mut response_line)
+    reader
+        .read_line(&mut response_line)
         .await
         .map_err(|e| format!("Failed to read from control socket: {}", e))?;
 
@@ -51,7 +53,10 @@ async fn fipsctl_socket(command: &str, params: Option<Value>) -> Result<Value, S
     if response["status"] == "ok" {
         Ok(response["data"].clone())
     } else {
-        Err(response["message"].as_str().unwrap_or("Unknown error").to_string())
+        Err(response["message"]
+            .as_str()
+            .unwrap_or("Unknown error")
+            .to_string())
     }
 }
 
@@ -75,7 +80,9 @@ async fn fipsctl(state: &VpnState, command: &str, params: Option<Value>) -> Resu
                     if response.status == "ok" {
                         return Ok(response.data.unwrap_or(Value::Null));
                     } else {
-                        return Err(response.message.unwrap_or_else(|| "Unknown error".to_string()));
+                        return Err(response
+                            .message
+                            .unwrap_or_else(|| "Unknown error".to_string()));
                     }
                 }
                 Ok(Err(_)) => { /* channel closed, fall through to socket */ }
@@ -130,8 +137,10 @@ pub async fn get_monitor_data(state: State<'_, VpnState>, tab: String) -> Result
         }
         "Transports" => {
             let transports = fipsctl(&state, "show_transports", None).await?;
-            let links = fipsctl(&state, "show_links", None).await.unwrap_or(json!([]));
-            Ok(json!({ 
+            let links = fipsctl(&state, "show_links", None)
+                .await
+                .unwrap_or(json!([]));
+            Ok(json!({
                 "transports": transports.get("transports").cloned().unwrap_or(transports),
                 "links": links.get("links").cloned().unwrap_or(links)
             }))
@@ -153,8 +162,12 @@ pub async fn get_monitor_data(state: State<'_, VpnState>, tab: String) -> Result
             Ok(json!({ "mmp": mmp.get("mmp").cloned().unwrap_or(mmp) }))
         }
         "Routing" => {
-            let routing = fipsctl(&state, "show_routing", None).await.unwrap_or(json!({}));
-            let cache = fipsctl(&state, "show_cache", None).await.unwrap_or(json!({}));
+            let routing = fipsctl(&state, "show_routing", None)
+                .await
+                .unwrap_or(json!({}));
+            let cache = fipsctl(&state, "show_cache", None)
+                .await
+                .unwrap_or(json!({}));
             Ok(json!({
                 "routing": routing.get("routing").cloned().unwrap_or(routing),
                 "cache": cache.get("cache").cloned().unwrap_or(cache),

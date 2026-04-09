@@ -35,7 +35,7 @@ pub fn run() {
             vpn::get_config,
             vpn::update_config
         ])
-        .manage(vpn::VpnState::new())
+        .manage((*vpn::VPN_STATE).clone())
         .setup(|app| {
             info!("Tauri setup complete. App version: {}", app.package_info().version);
             Ok(())

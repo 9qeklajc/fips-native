@@ -299,9 +299,6 @@ function App() {
     "dashboard",
   );
 
-  // Check if we're on a mobile device
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
   const { data: allData, isLoading, refetch } = useQuery({
     queryKey: ["fipsInfo"],
     queryFn: () => invoke<any>("get_info"),
@@ -392,27 +389,25 @@ function App() {
                 />
               </svg>
             </button>
-            {!isMobile && (
-              <button
-                onClick={() => setViewMode("monitor")}
-                className={`p-2 rounded-xl transition-all ${viewMode === "monitor" ? "bg-blue-600 text-white" : "text-neutral-500 hover:text-white hover:bg-neutral-800"}`}
-                title="Monitor"
+            <button
+              onClick={() => setViewMode("monitor")}
+              className={`p-2 rounded-xl transition-all ${viewMode === "monitor" ? "bg-blue-600 text-white" : "text-neutral-500 hover:text-white hover:bg-neutral-800"}`}
+              title="Monitor"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                  />
-                </svg>
-              </button>
-            )}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
+            </button>
             <button
               onClick={() => setViewMode("settings")}
               className={`p-2 rounded-xl transition-all ${viewMode === "settings" ? "bg-blue-600 text-white" : "text-neutral-500 hover:text-white hover:bg-neutral-800"}`}

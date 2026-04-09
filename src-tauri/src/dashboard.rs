@@ -183,7 +183,7 @@ pub async fn explore_mesh(state: State<'_, VpnState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn ping_node(_state: State<'_, VpnState>, target: String) -> Result<Value, String> {
+pub async fn ping_node(state: State<'_, VpnState>, target: String) -> Result<Value, String> {
     #[cfg(any(target_os = "macos", target_os = "linux"))]
     {
         let ping_target = if target.starts_with("npub") {

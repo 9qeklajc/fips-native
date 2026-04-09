@@ -6,7 +6,7 @@
 
 use crate::{FipsAddress, TunConfig};
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::net::Ipv6Addr;
 use std::os::unix::io::{AsRawFd, FromRawFd};
 use std::sync::mpsc;
@@ -107,6 +107,7 @@ impl TunDevice {
             }
 
             // Create the TUN device
+            #[allow(unused_mut)]
             let mut tun_config = ::tun::Configuration::default();
 
             // On macOS, utun devices get kernel-assigned names (utun0, utun1, ...),
@@ -305,7 +306,7 @@ impl TunWriter {
     ///
     /// Blocks forever, reading packets from the channel and writing them
     /// to the TUN device. Returns when the channel is closed (all senders dropped).
-    pub fn run(self) {
+    pub fn run(mut self) {
         use super::tcp_mss::clamp_tcp_mss;
 
         debug!(name = %self.name, max_mss = self.max_mss, "TUN writer starting");
@@ -539,6 +540,7 @@ mod platform {
     use futures::TryStreamExt;
     use super::TunError;
     use std::net::Ipv6Addr;
+    #[allow(unused_imports)]
     use tracing::debug;
 
     /// Check if IPv6 is disabled system-wide.

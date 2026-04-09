@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { invoke } from '@tauri-apps/api/core'
 
 interface MonitorViewProps {
   data: any
@@ -7,10 +9,18 @@ interface MonitorViewProps {
 
 type Tab = 'Node' | 'Peers' | 'Transports' | 'Sessions' | 'Tree' | 'Filters' | 'Performance' | 'Routing'
 
-export function MonitorView({ data, onClose }: MonitorViewProps) {
+export function MonitorView({ data: initialData, onClose }: MonitorViewProps) {
   const [activeTab, setActiveTab] = useState<Tab>('Node')
-
   const tabs: Tab[] = ['Node', 'Peers', 'Transports', 'Sessions', 'Tree', 'Filters', 'Performance', 'Routing']
+
+  const { data: monitorData, isFetching } = useQuery({
+    queryKey: ['monitor', activeTab],
+    queryFn: () => invoke<any>('get_monitor_data', { tab: activeTab }),
+    refetchInterval: 2000,
+  })
+
+  // Merge initial data for fields not in the current tab's poll
+  const data = { ...initialData, ...monitorData }
 
   const renderContent = () => {
     switch (activeTab) {
@@ -84,6 +94,12 @@ export function MonitorView({ data, onClose }: MonitorViewProps) {
           </div>
           <span className="hidden sm:inline opacity-30">|</span>
           <span>FIPS v{data.status?.version || '-'}</span>
+          {isFetching && (
+            <span className="flex items-center gap-1 text-blue-400">
+              <span className="w-1 h-1 bg-blue-400 rounded-full animate-ping"></span>
+              Refreshing...
+            </span>
+          )}
         </div>
         <div className="font-mono text-[10px]">
           {new Date().toLocaleTimeString()}

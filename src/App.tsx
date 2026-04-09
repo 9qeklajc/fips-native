@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useQuery } from "@tanstack/react-query";
 import { TreeGraph } from "./TreeGraph";
 import { MonitorView } from "./MonitorView";
 
@@ -269,14 +270,6 @@ function StatChip({ label, value }: { label: string; value: string | number }) {
 }
 
 function App() {
-  const [status, setStatus] = useState<StatusData | null>(null);
-  const [peers, setPeers] = useState<Peer[]>([]);
-  const [links, setLinks] = useState<Link[]>([]);
-  const [tree, setTree] = useState<TreeData | null>(null);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [transports, setTransports] = useState<Transport[]>([]);
-  const [allData, setAllData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [exploring, setExploring] = useState(false);
   const [viewMode, setViewMode] = useState<"dashboard" | "monitor">(
     "dashboard",
@@ -285,28 +278,23 @@ function App() {
   // Check if we're on a mobile device
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  const refreshData = async () => {
-    try {
-      const info = await invoke<any>("get_info");
-      setAllData(info);
-      setStatus(info.status);
-      setPeers(Array.isArray(info.peers) ? info.peers : []);
-      setLinks(Array.isArray(info.links) ? info.links : []);
-      setTree(info.tree);
-      setSessions(Array.isArray(info.sessions) ? info.sessions : []);
-      setTransports(Array.isArray(info.transports) ? info.transports : []);
-    } catch (err) {
-      console.error("Failed to fetch data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: allData, isLoading } = useQuery({
+    queryKey: ["fipsInfo"],
+    queryFn: () => invoke<any>("get_info"),
+    refetchInterval: 5000,
+  });
+
+  const status: StatusData | null = allData?.status || null;
+  const peers: Peer[] = Array.isArray(allData?.peers) ? allData.peers : [];
+  const links: Link[] = Array.isArray(allData?.links) ? allData.links : [];
+  const tree: TreeData | null = allData?.tree || null;
+  const sessions: Session[] = Array.isArray(allData?.sessions) ? allData.sessions : [];
+  const transports: Transport[] = Array.isArray(allData?.transports) ? allData.transports : [];
 
   const handleExplore = async () => {
     setExploring(true);
     try {
       await invoke("explore_mesh");
-      await refreshData();
     } catch (err) {
       console.error("Failed to explore mesh:", err);
     } finally {
@@ -314,13 +302,7 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    refreshData();
-    const interval = setInterval(refreshData, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (loading && !status)
+  if (isLoading && !status)
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-neutral-400">
         Loading FIPS...
@@ -803,7 +785,7 @@ function App() {
         </div>
 
         {/* Empty State */}
-        {!loading &&
+        {!isLoading &&
           peers.length === 0 &&
           links.length === 0 &&
           sessions.length === 0 &&

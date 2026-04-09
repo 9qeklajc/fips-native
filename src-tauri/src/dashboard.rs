@@ -66,17 +66,59 @@ pub async fn get_info() -> Result<Value, String> {
     );
 
     Ok(json!({
-        "status": status.unwrap_or(json!({ "version": "-", "state": "stopped" })),
-        "peers": peers.map(|v| v["peers"].clone()).unwrap_or(json!([])),
-        "links": links.map(|v| v["links"].clone()).unwrap_or(json!([])),
-        "tree": tree.unwrap_or(json!({ "is_root": true, "peers": [], "stats": {} })),
-        "sessions": sessions.map(|v| v["sessions"].clone()).unwrap_or(json!([])),
-        "transports": transports.map(|v| v["transports"].clone()).unwrap_or(json!([])),
-        "bloom": bloom.unwrap_or(json!({})),
-        "mmp": mmp.unwrap_or(json!({})),
-        "routing": routing.map(|v| v["routing"].clone()).unwrap_or(json!([])),
-        "cache": cache.unwrap_or(json!({})),
+        "status": status.ok().and_then(|v| v.get("status").cloned().or(Some(v.clone()))).unwrap_or(json!({ "version": "-", "state": "stopped" })),
+        "peers": peers.ok().and_then(|v| v.get("peers").cloned()).unwrap_or(json!([])),
+        "links": links.ok().and_then(|v| v.get("links").cloned()).unwrap_or(json!([])),
+        "tree": tree.ok().and_then(|v| v.get("tree").cloned().or(Some(v.clone()))).unwrap_or(json!({ "is_root": true, "peers": [], "stats": {} })),
+        "sessions": sessions.ok().and_then(|v| v.get("sessions").cloned()).unwrap_or(json!([])),
+        "transports": transports.ok().and_then(|v| v.get("transports").cloned()).unwrap_or(json!([])),
+        "bloom": bloom.ok().and_then(|v| v.get("bloom").cloned()).unwrap_or(json!({})),
+        "mmp": mmp.ok().and_then(|v| v.get("mmp").cloned()).unwrap_or(json!({})),
+        "routing": routing.ok().and_then(|v| v.get("routing").cloned()).unwrap_or(json!({})),
+        "cache": cache.ok().and_then(|v| v.get("cache").cloned()).unwrap_or(json!({})),
     }))
+}
+
+#[tauri::command]
+pub async fn get_monitor_data(tab: String) -> Result<Value, String> {
+    match tab.as_str() {
+        "Node" => {
+            let status = fipsctl("show_status").await?;
+            Ok(json!({ "status": status.get("status").cloned().unwrap_or(status) }))
+        }
+        "Peers" => {
+            let peers = fipsctl("show_peers").await?;
+            Ok(json!({ "peers": peers.get("peers").cloned().unwrap_or(json!([])) }))
+        }
+        "Transports" => {
+            let transports = fipsctl("show_transports").await?;
+            Ok(json!({ "transports": transports.get("transports").cloned().unwrap_or(json!([])) }))
+        }
+        "Sessions" => {
+            let sessions = fipsctl("show_sessions").await?;
+            Ok(json!({ "sessions": sessions.get("sessions").cloned().unwrap_or(json!([])) }))
+        }
+        "Tree" => {
+            let tree = fipsctl("show_tree").await?;
+            Ok(json!({ "tree": tree.get("tree").cloned().unwrap_or(tree) }))
+        }
+        "Filters" => {
+            let bloom = fipsctl("show_bloom").await?;
+            Ok(json!({ "bloom": bloom.get("bloom").cloned().unwrap_or(json!({})) }))
+        }
+        "Performance" => {
+            let mmp = fipsctl("show_mmp").await?;
+            Ok(json!({ "mmp": mmp.get("mmp").cloned().unwrap_or(json!({})) }))
+        }
+        "Routing" => {
+            let (routing_res, cache_res) = tokio::join!(fipsctl("show_routing"), fipsctl("show_cache"));
+            Ok(json!({
+                "routing": routing_res.map(|v| v.get("routing").cloned().unwrap_or(v)).unwrap_or(json!({})),
+                "cache": cache_res.map(|v| v.get("cache").cloned().unwrap_or(v)).unwrap_or(json!({})),
+            }))
+        }
+        _ => Err("Unknown tab".to_string()),
+    }
 }
 
 #[tauri::command]

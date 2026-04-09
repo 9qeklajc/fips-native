@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -73,6 +73,18 @@ function formatRelativeTime(timestampMs?: number | null): string {
 
 export function MonitorView({ data: initialData, onClose }: MonitorViewProps) {
   const [activeTab, setActiveTab] = useState<Tab>("Node");
+
+  useEffect(() => {
+    const activeEl = document.getElementById(`tab-${activeTab}`);
+    if (activeEl) {
+      activeEl.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
+    }
+  }, [activeTab]);
+
   const tabs: Tab[] = [
     "Node",
     "Peers",
@@ -119,38 +131,86 @@ export function MonitorView({ data: initialData, onClose }: MonitorViewProps) {
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col text-neutral-200 overflow-hidden">
       {/* Header Area */}
-      <div className="bg-neutral-950 border-b border-neutral-900 px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold text-white tracking-tight">
-            Network Monitor
-          </h2>
-          <span className="px-2 py-0.5 bg-neutral-800 rounded text-[10px] font-mono text-neutral-400 uppercase tracking-widest">
-            Advanced Mode
-          </span>
+      <div className="bg-neutral-950 border-b border-neutral-900 px-6 py-4 flex flex-col gap-4">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold text-white tracking-tight">
+              Network Monitor
+            </h2>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="px-4 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg text-sm font-bold transition-all border border-red-500/20"
+          >
+            Close Monitor
+          </button>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto no-scrollbar">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
-                activeTab === tab
-                  ? "bg-white text-black"
-                  : "text-neutral-500 hover:text-white hover:bg-neutral-900"
-              }`}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const idx = tabs.indexOf(activeTab);
+              if (idx > 0) setActiveTab(tabs[idx - 1]);
+            }}
+            disabled={tabs.indexOf(activeTab) === 0}
+            className="p-1.5 rounded-lg bg-neutral-900 text-neutral-400 hover:text-white disabled:opacity-20 transition-all md:hidden border border-neutral-800"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              {tab}
-            </button>
-          ))}
-        </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
 
-        <button
-          onClick={onClose}
-          className="px-4 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg text-sm font-bold transition-all border border-red-500/20"
-        >
-          Close Monitor
-        </button>
+          <div className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                id={`tab-${tab}`}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+                  activeTab === tab
+                    ? "bg-white text-black"
+                    : "text-neutral-500 hover:text-white hover:bg-neutral-900"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => {
+              const idx = tabs.indexOf(activeTab);
+              if (idx < tabs.length - 1) setActiveTab(tabs[idx + 1]);
+            }}
+            disabled={tabs.indexOf(activeTab) === tabs.length - 1}
+            className="p-1.5 rounded-lg bg-neutral-900 text-neutral-400 hover:text-white disabled:opacity-20 transition-all md:hidden border border-neutral-800"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Content Area */}

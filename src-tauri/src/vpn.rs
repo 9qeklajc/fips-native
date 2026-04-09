@@ -1,9 +1,10 @@
-use fips::{Config, Node};
 use fips::config::TransportInstances;
+use fips::control::ControlMessage;
+use fips::{Config, Node};
 use serde::{Deserialize, Serialize};
-use tokio::sync::Mutex;
-use tauri::State;
 use std::sync::Arc;
+use tauri::State;
+use tokio::sync::{mpsc, Mutex};
 
 macro_rules! info { ($($arg:tt)*) => { println!($($arg)*) } }
 macro_rules! warn { ($($arg:tt)*) => { eprintln!($($arg)*) } }
@@ -99,6 +100,7 @@ pub struct VpnStateInner {
     pub node_running: Mutex<bool>,
     pub stop_tx: Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
     pub stopped_rx: Mutex<Option<tokio::sync::oneshot::Receiver<()>>>,
+    pub control_tx: Mutex<Option<mpsc::Sender<ControlMessage>>>,
     pub config: Mutex<AppConfig>,
     pub tun_fd: Mutex<Option<i32>>,
 }
@@ -110,6 +112,7 @@ impl VpnState {
                 node_running: Mutex::new(false),
                 stop_tx: Mutex::new(None),
                 stopped_rx: Mutex::new(None),
+                control_tx: Mutex::new(None),
                 config: Mutex::new(AppConfig::default()),
                 tun_fd: Mutex::new(None),
             }),
@@ -129,17 +132,17 @@ pub async fn update_config(state: State<'_, VpnState>, config: AppConfig) -> Res
         let mut current_config = state.inner.config.lock().await;
         *current_config = config;
     }
-    
+
     // Check if node is running
     let running = state.inner.node_running.lock().await;
     if *running {
         info!("Configuration updated while node is running. Restarting node...");
         drop(running);
-        
+
         let _ = stop_vpn_internal(&state.inner).await;
         start_vpn_internal(&state.inner, None).await?;
     }
-    
+
     Ok(())
 }
 
@@ -154,19 +157,19 @@ async fn start_vpn_internal(state: &Arc<VpnStateInner>, tun_fd: Option<i32>) -> 
     }
 
     let app_config = state.config.lock().await.clone();
-    
+
     let mut config = Config::default();
     config.node.identity.persistent = app_config.node.persistent;
     config.node.identity.nsec = app_config.node.nsec.clone();
-    
+
     config.tun.enabled = app_config.tun.enabled;
     config.tun.name = Some(app_config.tun.name.clone());
     config.tun.mtu = Some(app_config.tun.mtu);
-    
+
     config.dns.enabled = app_config.dns.enabled;
     config.dns.bind_addr = Some(app_config.dns.bind_addr.clone());
     config.dns.port = Some(app_config.dns.port);
-    
+
     config.node.control.enabled = true;
     config.node.control.socket_path = "/tmp/fips-control.sock".to_string();
 
@@ -176,7 +179,7 @@ async fn start_vpn_internal(state: &Arc<VpnStateInner>, tun_fd: Option<i32>) -> 
             ..Default::default()
         });
     }
-    
+
     if app_config.transports.tcp_enabled {
         config.transports.tcp = TransportInstances::Single(fips::config::TcpConfig {
             bind_addr: Some(app_config.transports.tcp_bind_addr.clone()),
@@ -210,19 +213,27 @@ async fn start_vpn_internal(state: &Arc<VpnStateInner>, tun_fd: Option<i32>) -> 
     config.node.identity.nsec = Some(resolved.nsec);
 
     let mut node = Node::new(config).map_err(|e| format!("Failed to create node: {}", e))?;
-    
+
+    // Set up in-process control channel
+    let control_tx = node.set_control_channel();
+    *state.control_tx.lock().await = Some(control_tx);
+
     let current_fd = tun_fd.or(*state.tun_fd.lock().await);
 
     if let Some(fd) = current_fd {
         info!("Starting node with FD: {}", fd);
-        node.start_with_tun_fd(fd as std::os::unix::io::RawFd).await.map_err(|e| format!("Failed to start node with FD: {}", e))?;
+        node.start_with_tun_fd(fd as std::os::unix::io::RawFd)
+            .await
+            .map_err(|e| format!("Failed to start node with FD: {}", e))?;
     } else {
-        node.start().await.map_err(|e| format!("Failed to start node: {}", e))?;
+        node.start()
+            .await
+            .map_err(|e| format!("Failed to start node: {}", e))?;
     }
-    
+
     let (tx, rx) = tokio::sync::oneshot::channel();
     let (done_tx, done_rx) = tokio::sync::oneshot::channel();
-    
+
     *state.stop_tx.lock().await = Some(tx);
     *state.stopped_rx.lock().await = Some(done_rx);
     *running = true;
@@ -240,16 +251,16 @@ async fn start_vpn_internal(state: &Arc<VpnStateInner>, tun_fd: Option<i32>) -> 
                 info!("Shutdown signal received, stopping node...");
             }
         }
-        
+
         let saved_fd = node.take_tun_fd();
         if let Some(fd) = saved_fd {
             *state_inner.tun_fd.lock().await = Some(fd as i32);
         }
-        
+
         if let Err(e) = node.stop().await {
             warn!("Error stopping node: {}", e);
         }
-        
+
         let mut running = state_inner.node_running.lock().await;
         *running = false;
         let _ = done_tx.send(());
@@ -263,7 +274,7 @@ async fn stop_vpn_internal(state: &VpnStateInner) -> Result<(), String> {
     let mut stop_tx_opt = state.stop_tx.lock().await;
     if let Some(tx) = stop_tx_opt.take() {
         let _ = tx.send(());
-        
+
         // Wait for the node to actually stop
         let mut rx_opt = state.stopped_rx.lock().await;
         if let Some(rx) = rx_opt.take() {

@@ -1050,6 +1050,20 @@ checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
 
 [[package]]
 name = "fips"
+version = "0.1.0"
+dependencies = [
+ "fips 0.3.0-dev",
+ "jni",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-shell",
+ "tokio",
+]
+
+[[package]]
+name = "fips"
 version = "0.3.0-dev"
 dependencies = [
  "bech32",
@@ -1075,20 +1089,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tun",
-]
-
-[[package]]
-name = "fips-android"
-version = "0.1.0"
-dependencies = [
- "fips",
- "jni",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-shell",
- "tokio",
 ]
 
 [[package]]

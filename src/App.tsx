@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useQuery } from "@tanstack/react-query";
 import { TreeGraph, type DirectPeer } from "./TreeGraph";
 import { MonitorView } from "./MonitorView";
+import { ConfigView } from "./ConfigView";
 
 interface StatusData {
   version?: string;
@@ -256,7 +257,7 @@ function StatChip({ label, value }: { label: string; value: string | number }) {
 }
 
 function App() {
-  const [viewMode, setViewMode] = useState<"dashboard" | "monitor">(
+  const [viewMode, setViewMode] = useState<"dashboard" | "monitor" | "settings">(
     "dashboard",
   );
 
@@ -303,25 +304,34 @@ function App() {
     );
   }
 
+  if (viewMode === "settings") {
+    return <ConfigView onClose={() => setViewMode("dashboard")} />;
+  }
+
   return (
     <div className="min-h-screen bg-black text-neutral-200 pb-12 overflow-x-hidden">
       <div className="mx-auto max-w-7xl space-y-4 px-4 py-4 sm:py-6 overflow-hidden">
         {/* Header */}
         <div className="border-b border-neutral-900 pb-4 flex flex-col lg:flex-row justify-between items-start gap-4">
           <div className="w-full lg:w-auto min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-              FIPS
-            </h1>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-mono text-neutral-500">
-                {status?.version || "0.0.0"}
-              </span>
-              <span
-                className={`h-2 w-2 rounded-full ${status?.state === "running" ? "bg-green-500 animate-pulse" : "bg-neutral-600"}`}
-              ></span>
-              <span className="text-[10px] uppercase text-neutral-500 font-semibold tracking-widest">
-                {status?.state || "stopped"}
-              </span>
+            <div className="flex items-center gap-4">
+              <img src="/logo.jpg" alt="FIPS Logo" className="w-12 h-12 rounded-xl border border-neutral-800" />
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                  FIPS
+                </h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs font-mono text-neutral-500">
+                    {status?.version || "0.0.0"}
+                  </span>
+                  <span
+                    className={`h-2 w-2 rounded-full ${status?.state === "running" ? "bg-green-500 animate-pulse" : "bg-neutral-600"}`}
+                  ></span>
+                  <span className="text-[10px] uppercase text-neutral-500 font-semibold tracking-widest">
+                    {status?.state || "stopped"}
+                  </span>
+                </div>
+              </div>
             </div>
             {status?.npub && (
               <div className="mt-3 bg-neutral-900/50 rounded-lg p-2 border border-neutral-800/50 overflow-hidden">
@@ -341,6 +351,12 @@ function App() {
             )}
           </div>
           <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+            <button
+              onClick={() => setViewMode("settings")}
+              className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-500 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 border border-blue-500 whitespace-nowrap"
+            >
+              Settings & Tools
+            </button>
             {!isMobile && (
               <button
                 onClick={() => setViewMode("monitor")}

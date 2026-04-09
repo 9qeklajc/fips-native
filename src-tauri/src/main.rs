@@ -1,3 +1,3 @@
 fn main() {
-    fips_android_lib::run();
+    fips_lib::run();
 }

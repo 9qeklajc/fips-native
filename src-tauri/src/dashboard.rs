@@ -67,15 +67,15 @@ pub async fn get_info() -> Result<Value, String> {
 
     Ok(json!({
         "status": status.ok().and_then(|v| v.get("status").cloned().or(Some(v.clone()))).unwrap_or(json!({ "version": "-", "state": "stopped" })),
-        "peers": peers.ok().and_then(|v| v.get("peers").cloned()).unwrap_or(json!([])),
-        "links": links.ok().and_then(|v| v.get("links").cloned()).unwrap_or(json!([])),
+        "peers": peers.ok().and_then(|v| v.get("peers").cloned().or(Some(v.clone()))).unwrap_or(json!([])),
+        "links": links.ok().and_then(|v| v.get("links").cloned().or(Some(v.clone()))).unwrap_or(json!([])),
         "tree": tree.ok().and_then(|v| v.get("tree").cloned().or(Some(v.clone()))).unwrap_or(json!({ "is_root": true, "peers": [], "stats": {} })),
-        "sessions": sessions.ok().and_then(|v| v.get("sessions").cloned()).unwrap_or(json!([])),
-        "transports": transports.ok().and_then(|v| v.get("transports").cloned()).unwrap_or(json!([])),
-        "bloom": bloom.ok().and_then(|v| v.get("bloom").cloned()).unwrap_or(json!({})),
-        "mmp": mmp.ok().and_then(|v| v.get("mmp").cloned()).unwrap_or(json!({})),
-        "routing": routing.ok().and_then(|v| v.get("routing").cloned()).unwrap_or(json!({})),
-        "cache": cache.ok().and_then(|v| v.get("cache").cloned()).unwrap_or(json!({})),
+        "sessions": sessions.ok().and_then(|v| v.get("sessions").cloned().or(Some(v.clone()))).unwrap_or(json!([])),
+        "transports": transports.ok().and_then(|v| v.get("transports").cloned().or(Some(v.clone()))).unwrap_or(json!([])),
+        "bloom": bloom.ok().and_then(|v| v.get("bloom").cloned().or(Some(v.clone()))).unwrap_or(json!({})),
+        "mmp": mmp.ok().and_then(|v| v.get("mmp").cloned().or(Some(v.clone()))).unwrap_or(json!({})),
+        "routing": routing.ok().and_then(|v| v.get("routing").cloned().or(Some(v.clone()))).unwrap_or(json!({})),
+        "cache": cache.ok().and_then(|v| v.get("cache").cloned().or(Some(v.clone()))).unwrap_or(json!({})),
     }))
 }
 
@@ -88,15 +88,19 @@ pub async fn get_monitor_data(tab: String) -> Result<Value, String> {
         }
         "Peers" => {
             let peers = fipsctl("show_peers").await?;
-            Ok(json!({ "peers": peers.get("peers").cloned().unwrap_or(json!([])) }))
+            Ok(json!({ "peers": peers.get("peers").cloned().unwrap_or(peers) }))
         }
         "Transports" => {
             let transports = fipsctl("show_transports").await?;
-            Ok(json!({ "transports": transports.get("transports").cloned().unwrap_or(json!([])) }))
+            let links = fipsctl("show_links").await.unwrap_or(json!([]));
+            Ok(json!({ 
+                "transports": transports.get("transports").cloned().unwrap_or(transports),
+                "links": links.get("links").cloned().unwrap_or(links)
+            }))
         }
         "Sessions" => {
             let sessions = fipsctl("show_sessions").await?;
-            Ok(json!({ "sessions": sessions.get("sessions").cloned().unwrap_or(json!([])) }))
+            Ok(json!({ "sessions": sessions.get("sessions").cloned().unwrap_or(sessions) }))
         }
         "Tree" => {
             let tree = fipsctl("show_tree").await?;
@@ -104,17 +108,18 @@ pub async fn get_monitor_data(tab: String) -> Result<Value, String> {
         }
         "Filters" => {
             let bloom = fipsctl("show_bloom").await?;
-            Ok(json!({ "bloom": bloom.get("bloom").cloned().unwrap_or(json!({})) }))
+            Ok(json!({ "bloom": bloom.get("bloom").cloned().unwrap_or(bloom) }))
         }
         "Performance" => {
             let mmp = fipsctl("show_mmp").await?;
-            Ok(json!({ "mmp": mmp.get("mmp").cloned().unwrap_or(json!({})) }))
+            Ok(json!({ "mmp": mmp.get("mmp").cloned().unwrap_or(mmp) }))
         }
         "Routing" => {
-            let (routing_res, cache_res) = tokio::join!(fipsctl("show_routing"), fipsctl("show_cache"));
+            let routing = fipsctl("show_routing").await.unwrap_or(json!({}));
+            let cache = fipsctl("show_cache").await.unwrap_or(json!({}));
             Ok(json!({
-                "routing": routing_res.map(|v| v.get("routing").cloned().unwrap_or(v)).unwrap_or(json!({})),
-                "cache": cache_res.map(|v| v.get("cache").cloned().unwrap_or(v)).unwrap_or(json!({})),
+                "routing": routing.get("routing").cloned().unwrap_or(routing),
+                "cache": cache.get("cache").cloned().unwrap_or(cache),
             }))
         }
         _ => Err("Unknown tab".to_string()),

@@ -23,14 +23,14 @@ tokio = { version = "1.40", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["registry"] }
 tracing-android = "0.2"
-fips = { path = "../../fips", default-features = false }
+fips = { path = "../fips", default-features = false }
 
 [target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
-fips = { path = "../../fips", default-features = false, features = ["tun-support"] }
+fips = { path = "../fips", default-features = false, features = ["tun-support"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.21"
-fips = { path = "../../fips", default-features = false, features = ["tun-support"] }
+fips = { path = "../fips", default-features = false, features = ["tun-support"] }
 
 [target.'cfg(not(any(target_os = "linux", target_os = "macos")))'.dependencies]
 jni = "0.21"

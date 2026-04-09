@@ -1,5 +1,5 @@
-mod vpn;
 mod dashboard;
+mod vpn;
 use tracing::info;
 
 #[tauri::command]
@@ -14,11 +14,14 @@ pub fn run() {
     {
         use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
         tracing_subscriber::registry()
-            .with(tracing_android::layer("com.fips.app").unwrap()
-                .with_filter(tracing_subscriber::filter::LevelFilter::INFO))
+            .with(
+                tracing_android::layer("com.fips.app")
+                    .unwrap()
+                    .with_filter(tracing_subscriber::filter::LevelFilter::INFO),
+            )
             .init();
     }
-    
+
     info!("FIPS Native Library initializing...");
 
     tauri::Builder::default()
@@ -37,7 +40,10 @@ pub fn run() {
         ])
         .manage((*vpn::VPN_STATE).clone())
         .setup(|app| {
-            info!("Tauri setup complete. App version: {}", app.package_info().version);
+            info!(
+                "Tauri setup complete. App version: {}",
+                app.package_info().version
+            );
             Ok(())
         })
         .run(tauri::generate_context!())

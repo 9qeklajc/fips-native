@@ -1,0 +1,33 @@
+services:
+  fips:
+    image: fips-daemon:latest
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "2121:2121/udp"    # FIPS Peer Port (Mesh Entry)
+      - "8000:8000"        # Proxying routstr's API port
+    volumes:
+      - fips-data:/etc/fips
+      - ./.sisyphus/fips/fips-entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/entrypoint.sh"]
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+
+  routstr:
+    network_mode: "service:fips"
+    depends_on:
+      - fips
+    environment:
+      - HTTP_URL=http://routstr.fips:8000
+    # ports: []  # Explicitly removed in shared network mode
+
+  tor:
+    environment:
+      - HS_ROUTER=fips:8000:80
+    depends_on:
+      - fips
+
+volumes:
+  fips-data:

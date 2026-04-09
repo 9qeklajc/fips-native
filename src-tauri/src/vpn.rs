@@ -1,21 +1,25 @@
 use fips::config::TransportInstances;
 use fips::control::ControlMessage;
 use fips::{Config, Node};
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tauri::State;
 use tokio::sync::{mpsc, Mutex};
-use once_cell::sync::Lazy;
 
 #[cfg(target_os = "android")]
-use jni::{JNIEnv, objects::{JClass, JString}};
+use jni::{
+    objects::{JClass, JString},
+    JNIEnv,
+};
 
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
-pub static VPN_STATE: Lazy<VpnState> = Lazy::new(|| VpnState::new());
+pub static VPN_STATE: Lazy<VpnState> = Lazy::new(VpnState::new);
 
 #[cfg(target_os = "android")]
-static RUNTIME: Lazy<std::sync::Mutex<Option<tokio::runtime::Runtime>>> = Lazy::new(|| std::sync::Mutex::new(None));
+static RUNTIME: Lazy<std::sync::Mutex<Option<tokio::runtime::Runtime>>> =
+    Lazy::new(|| std::sync::Mutex::new(None));
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -154,7 +158,11 @@ pub async fn update_config(state: State<'_, VpnState>, config: AppConfig) -> Res
     Ok(())
 }
 
-async fn start_vpn_internal(state: &Arc<VpnStateInner>, tun_fd: Option<i32>, socket_path: Option<String>) -> Result<(), String> {
+async fn start_vpn_internal(
+    state: &Arc<VpnStateInner>,
+    tun_fd: Option<i32>,
+    socket_path: Option<String>,
+) -> Result<(), String> {
     let mut running = state.node_running.lock().await;
     if *running {
         return Err("VPN is already running".to_string());
@@ -197,7 +205,8 @@ async fn start_vpn_internal(state: &Arc<VpnStateInner>, tun_fd: Option<i32>, soc
         #[cfg(target_os = "android")]
         {
             // Use a path in the internal data directory that we know is writeable
-            config.node.control.socket_path = "/data/data/com.fips.app/fips-control.sock".to_string();
+            config.node.control.socket_path =
+                "/data/data/com.fips.app/fips-control.sock".to_string();
         }
         #[cfg(not(target_os = "android"))]
         {
@@ -286,7 +295,7 @@ async fn start_vpn_internal(state: &Arc<VpnStateInner>, tun_fd: Option<i32>, soc
 
         let saved_fd = node.take_tun_fd();
         if let Some(fd) = saved_fd {
-            *state_inner.tun_fd.lock().await = Some(fd as i32);
+            *state_inner.tun_fd.lock().await = Some(fd);
         }
 
         if let Err(e) = node.stop().await {
@@ -342,19 +351,31 @@ pub extern "C" fn Java_com_fips_app_FipsService_startRustServer(
         .expect("Couldn't get java string!")
         .into();
 
-    let socket_path = std::path::Path::new(&base_path_str).join("fips-control.sock").to_string_lossy().to_string();
+    let socket_path = std::path::Path::new(&base_path_str)
+        .join("fips-control.sock")
+        .to_string_lossy()
+        .to_string();
 
-    let tun_fd_opt = if tun_fd >= 0 { Some(tun_fd as i32) } else { None };
+    let tun_fd_opt = if tun_fd >= 0 {
+        Some(tun_fd as i32)
+    } else {
+        None
+    };
 
     let mut runtime_guard = RUNTIME.lock().unwrap();
     if runtime_guard.is_none() {
-        *runtime_guard = Some(tokio::runtime::Runtime::new().expect("Failed to create tokio runtime"));
+        *runtime_guard =
+            Some(tokio::runtime::Runtime::new().expect("Failed to create tokio runtime"));
     }
 
     if let Some(rt) = runtime_guard.as_ref() {
         rt.spawn(async move {
-            info!("Starting FIPS background server with socket path: {} and tun_fd: {:?}", socket_path, tun_fd_opt);
-            let _: Result<(), String> = start_vpn_internal(&VPN_STATE.inner, tun_fd_opt, Some(socket_path)).await;
+            info!(
+                "Starting FIPS background server with socket path: {} and tun_fd: {:?}",
+                socket_path, tun_fd_opt
+            );
+            let _: Result<(), String> =
+                start_vpn_internal(&VPN_STATE.inner, tun_fd_opt, Some(socket_path)).await;
         });
     }
 }
@@ -362,10 +383,7 @@ pub extern "C" fn Java_com_fips_app_FipsService_startRustServer(
 #[cfg(target_os = "android")]
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "C" fn Java_com_fips_app_FipsService_stopRustServer(
-    _env: JNIEnv,
-    _class: JClass,
-) {
+pub extern "C" fn Java_com_fips_app_FipsService_stopRustServer(_env: JNIEnv, _class: JClass) {
     let runtime_guard = RUNTIME.lock().unwrap();
     if let Some(rt) = runtime_guard.as_ref() {
         rt.block_on(async {
@@ -373,4 +391,3 @@ pub extern "C" fn Java_com_fips_app_FipsService_stopRustServer(
         });
     }
 }
-

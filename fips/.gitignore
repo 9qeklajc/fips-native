@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+
+# Build
+/target
+
+# Editor/IDE
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Claude Code
+.claude/
+
+deploy/
+vps.env
+
+reference/
+
+dist/
+*.ipk
+
+sim-results/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg

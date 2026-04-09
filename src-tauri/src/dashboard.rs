@@ -74,7 +74,7 @@ async fn fipsctl(state: &VpnState, command: &str, params: Option<Value>) -> Resu
             params: params.clone(),
         };
 
-        if let Ok(_) = tx.send((request, resp_tx)).await {
+        if tx.send((request, resp_tx)).await.is_ok() {
             match tokio::time::timeout(std::time::Duration::from_secs(10), resp_rx).await {
                 Ok(Ok(response)) => {
                     if response.status == "ok" {
@@ -183,7 +183,7 @@ pub async fn explore_mesh(state: State<'_, VpnState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn ping_node(state: State<'_, VpnState>, target: String) -> Result<Value, String> {
+pub async fn ping_node(_state: State<'_, VpnState>, target: String) -> Result<Value, String> {
     #[cfg(any(target_os = "macos", target_os = "linux"))]
     {
         let ping_target = if target.starts_with("npub") {

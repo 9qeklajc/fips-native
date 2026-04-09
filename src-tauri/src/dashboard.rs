@@ -52,13 +52,17 @@ async fn fipsctl(command: &str) -> Result<Value, String> {
 
 #[tauri::command]
 pub async fn get_info() -> Result<Value, String> {
-    let (status, peers, links, tree, sessions, transports) = tokio::join!(
+    let (status, peers, links, tree, sessions, transports, bloom, mmp, routing, cache) = tokio::join!(
         fipsctl("show_status"),
         fipsctl("show_peers"),
         fipsctl("show_links"),
         fipsctl("show_tree"),
         fipsctl("show_sessions"),
-        fipsctl("show_transports")
+        fipsctl("show_transports"),
+        fipsctl("show_bloom"),
+        fipsctl("show_mmp"),
+        fipsctl("show_routing"),
+        fipsctl("show_cache")
     );
 
     Ok(json!({
@@ -68,6 +72,10 @@ pub async fn get_info() -> Result<Value, String> {
         "tree": tree.unwrap_or(json!({ "is_root": true, "peers": [], "stats": {} })),
         "sessions": sessions.map(|v| v["sessions"].clone()).unwrap_or(json!([])),
         "transports": transports.map(|v| v["transports"].clone()).unwrap_or(json!([])),
+        "bloom": bloom.unwrap_or(json!({})),
+        "mmp": mmp.unwrap_or(json!({})),
+        "routing": routing.map(|v| v["routing"].clone()).unwrap_or(json!([])),
+        "cache": cache.unwrap_or(json!({})),
     }))
 }
 

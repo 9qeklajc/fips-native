@@ -402,8 +402,8 @@ export function TreeGraph({ tree, peers: directPeers }: { tree: TreeData; peers:
   }, [viewBox])
 
   return (
-    <div>
-      <div className="grid grid-cols-2 gap-2 mb-2 md:grid-cols-5 lg:grid-cols-8">
+    <div className="overflow-hidden">
+      <div className="flex flex-wrap gap-2 mb-2">
         {([
           ['Received', tree.stats.received],
           ['Sent', tree.stats.sent],
@@ -421,7 +421,7 @@ export function TreeGraph({ tree, peers: directPeers }: { tree: TreeData; peers:
           ['Stale', tree.stats.stale],
           ['Unknown Peer', tree.stats.unknown_peer],
         ] as [string, number][]).map(([label, value]) => (
-          <div key={label} className="rounded bg-neutral-950 px-2 py-1.5">
+          <div key={label} className="rounded bg-neutral-950 px-2 py-1.5 flex-1 min-w-[100px] max-w-[150px]">
             <div className="text-[10px] text-neutral-500 uppercase truncate" title={label}>{label}</div>
             <div className="text-lg font-semibold text-white truncate">{(value ?? 0).toLocaleString()}</div>
           </div>

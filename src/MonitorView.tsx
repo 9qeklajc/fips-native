@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useMemo, memo } from "react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
@@ -101,6 +101,7 @@ export function MonitorView({ data: initialData, onClose }: MonitorViewProps) {
     queryKey: ["monitor", activeTab],
     queryFn: () => invoke<any>("get_monitor_data", { tab: activeTab }),
     refetchInterval: 2000,
+    placeholderData: keepPreviousData,
   });
 
   // Merge initial data for fields not in the current tab's poll
@@ -147,12 +148,12 @@ export function MonitorView({ data: initialData, onClose }: MonitorViewProps) {
             <span className="text-[10px] uppercase text-neutral-500 font-semibold tracking-widest">
               {data.status?.state || "stopped"}
             </span>
-            {isFetching && (
-              <span className="flex items-center gap-1 text-blue-400 text-[10px] uppercase font-bold ml-2">
-                <span className="w-1 h-1 bg-blue-400 rounded-full animate-ping"></span>
-                Refreshing
-              </span>
-            )}
+            <span
+              className={`flex items-center gap-1 text-blue-400 text-[10px] uppercase font-bold ml-2 transition-opacity duration-300 ${isFetching ? "opacity-100" : "opacity-0"}`}
+            >
+              <span className="w-1 h-1 bg-blue-400 rounded-full animate-ping"></span>
+              Refreshing
+            </span>
           </div>
         </div>
 
@@ -288,7 +289,7 @@ function StatItem({
   );
 }
 
-function NodeTab({ data }: { data: any }) {
+const NodeTab = memo(({ data }: { data: any }) => {
   const status = data.status || {};
   const fwd = status.forwarding || {};
 
@@ -433,7 +434,7 @@ function NodeTab({ data }: { data: any }) {
       </Card>
     </div>
   );
-}
+});
 
 function formatThroughput(val: number): string {
   if (val < 0) return "0 B/s";
@@ -445,26 +446,29 @@ function formatThroughput(val: number): string {
   return `${(val / 1000000000).toFixed(2)} GB/s`;
 }
 
-function PeersTab({ data }: { data: any }) {
-  const peers = [...(data.peers || [])];
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+const PeersTab = memo(({ data }: { data: any }) => {
+  const peers = useMemo(() => {
+    const list = [...(data.peers || [])];
+    // Sort by LQI ascending (best first) like fipstop
+    list.sort((a, b) => {
+      const lqiA = a.mmp?.lqi ?? 999999;
+      const lqiB = b.mmp?.lqi ?? 999999;
+      return lqiA - lqiB;
+    });
+    return list;
+  }, [data.peers]);
 
-  const copyToClipboard = async (text: string, index: number) => {
+  const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
+
+  const copyToClipboard = async (text: string, id: string) => {
     try {
       await writeText(text);
-      setCopiedIndex(index);
+      setCopiedIndex(id);
       setTimeout(() => setCopiedIndex(null), 2000);
     } catch (err) {
       console.error("Failed to copy npub:", err);
     }
   };
-
-  // Sort by LQI ascending (best first) like fipstop
-  peers.sort((a, b) => {
-    const lqiA = a.mmp?.lqi ?? 999999;
-    const lqiB = b.mmp?.lqi ?? 999999;
-    return lqiA - lqiB;
-  });
 
   return (
     <Card title={`Active Peers (${peers.length})`} iconColor="bg-yellow-500">
@@ -490,6 +494,7 @@ function PeersTab({ data }: { data: any }) {
               const stats = peer.stats || {};
               const isParent = peer.is_parent;
               const isChild = peer.is_child;
+              const peerId = peer.npub || `${peer.display_name}-${i}`;
 
               const rowColor = isParent
                 ? "text-fuchsia-500"
@@ -503,7 +508,7 @@ function PeersTab({ data }: { data: any }) {
 
               return (
                 <tr
-                  key={i}
+                  key={peerId}
                   className={`hover:bg-white/[0.02] transition-colors group font-mono text-[11px] ${rowColor}`}
                 >
                   <td className="pl-5 pr-4 py-2 font-bold whitespace-nowrap">
@@ -513,11 +518,11 @@ function PeersTab({ data }: { data: any }) {
                     <span className="truncate">{peer.npub || "-"}</span>
                     {peer.npub && (
                       <button
-                        onClick={() => copyToClipboard(peer.npub, i)}
+                        onClick={() => copyToClipboard(peer.npub, peerId)}
                         className="p-1 hover:bg-white/10 rounded transition-all text-neutral-400 hover:text-white"
                         title="Copy Npub"
                       >
-                        {copiedIndex === i ? (
+                        {copiedIndex === peerId ? (
                           <svg
                             className="w-3.5 h-3.5 text-green-500"
                             fill="none"
@@ -583,9 +588,9 @@ function PeersTab({ data }: { data: any }) {
       </div>
     </Card>
   );
-}
+});
 
-function SessionsTab({ data }: { data: any }) {
+const SessionsTab = memo(({ data }: { data: any }) => {
   const sessions = data.sessions || [];
   return (
     <Card title={`Sessions (${sessions.length})`} iconColor="bg-yellow-500">
@@ -614,10 +619,11 @@ function SessionsTab({ data }: { data: any }) {
                     ? "text-yellow-500"
                     : "text-red-500";
               const mmp = s.mmp || {};
+              const sessionId = s.remote_addr || i;
 
               return (
                 <tr
-                  key={i}
+                  key={sessionId}
                   className="hover:bg-white/[0.02] transition-colors group font-mono text-[11px] text-neutral-300"
                 >
                   <td className="pl-5 pr-4 py-2 font-bold text-white whitespace-nowrap">
@@ -655,20 +661,25 @@ function SessionsTab({ data }: { data: any }) {
       </div>
     </Card>
   );
-}
+});
 
-function TransportsTab({ data }: { data: any }) {
+const TransportsTab = memo(({ data }: { data: any }) => {
   const transports = data.transports || [];
   const links = data.links || [];
 
-  const rows: any[] = [];
-  transports.forEach((t: any) => {
-    rows.push({ type: "transport", data: t });
-    const tLinks = links.filter((l: any) => l.transport_id === t.transport_id);
-    tLinks.forEach((l: any, idx: number) => {
-      rows.push({ type: "link", data: l, isLast: idx === tLinks.length - 1 });
+  const rows = useMemo(() => {
+    const r: any[] = [];
+    transports.forEach((t: any) => {
+      r.push({ type: "transport", data: t });
+      const tLinks = links.filter(
+        (l: any) => l.transport_id === t.transport_id,
+      );
+      tLinks.forEach((l: any, idx: number) => {
+        r.push({ type: "link", data: l, isLast: idx === tLinks.length - 1 });
+      });
     });
-  });
+    return r;
+  }, [transports, links]);
 
   return (
     <Card
@@ -759,9 +770,9 @@ function TransportsTab({ data }: { data: any }) {
       </div>
     </Card>
   );
-}
+});
 
-function TreeTab({ data }: { data: any }) {
+const TreeTab = memo(({ data }: { data: any }) => {
   const tree = data.tree || {};
   const stats = tree.stats || {};
   const peers = tree.peers || [];
@@ -880,9 +891,10 @@ function TreeTab({ data }: { data: any }) {
             <tbody className="divide-y divide-neutral-800/50">
               {peers.map((p: any, i: number) => {
                 const isSameRoot = p.root === myRoot;
+                const peerId = p.npub || p.display_name || i;
                 return (
                   <tr
-                    key={i}
+                    key={peerId}
                     className="hover:bg-white/[0.02] transition-colors group font-mono text-[11px] text-neutral-300"
                   >
                     <td className="pl-5 pr-4 py-2 font-bold text-white">
@@ -906,9 +918,9 @@ function TreeTab({ data }: { data: any }) {
       </Card>
     </div>
   );
-}
+});
 
-function FiltersTab({ data }: { data: any }) {
+const FiltersTab = memo(({ data }: { data: any }) => {
   const bloom = data.bloom || {};
   const stats = bloom.stats || {};
   const peerFilters = bloom.peer_filters || [];
@@ -987,10 +999,11 @@ function FiltersTab({ data }: { data: any }) {
                   f.estimated_count != null
                     ? Math.round(f.estimated_count)
                     : "-";
+                const peerId = f.npub || f.display_name || i;
 
                 return (
                   <tr
-                    key={i}
+                    key={peerId}
                     className="hover:bg-white/[0.02] transition-colors group font-mono text-[11px] text-neutral-300"
                   >
                     <td className="pl-5 pr-4 py-2 font-bold text-white">
@@ -1015,9 +1028,9 @@ function FiltersTab({ data }: { data: any }) {
       </Card>
     </div>
   );
-}
+});
 
-function PerformanceTab({ data }: { data: any }) {
+const PerformanceTab = memo(({ data }: { data: any }) => {
   const mmp = data.mmp || {};
   const linkPeers = mmp.peers || [];
   const sessionPeers = mmp.sessions || [];
@@ -1063,9 +1076,10 @@ function PerformanceTab({ data }: { data: any }) {
             <tbody className="divide-y divide-neutral-800/50">
               {linkPeers.map((p: any, i: number) => {
                 const ll = p.link_layer || {};
+                const peerId = p.npub || p.display_name || i;
                 return (
                   <tr
-                    key={i}
+                    key={peerId}
                     className="hover:bg-white/[0.02] transition-colors group font-mono text-[11px] text-neutral-300"
                   >
                     <td className="pl-5 pr-4 py-2 font-bold text-white">
@@ -1123,9 +1137,10 @@ function PerformanceTab({ data }: { data: any }) {
             <tbody className="divide-y divide-neutral-800/50">
               {sessionPeers.map((s: any, i: number) => {
                 const sl = s.session_layer || {};
+                const sessionId = s.remote_addr || i;
                 return (
                   <tr
-                    key={i}
+                    key={sessionId}
                     className="hover:bg-white/[0.02] transition-colors group font-mono text-[11px] text-neutral-300"
                   >
                     <td className="pl-5 pr-4 py-2 font-bold text-white">
@@ -1155,9 +1170,9 @@ function PerformanceTab({ data }: { data: any }) {
       </Card>
     </div>
   );
-}
+});
 
-function RoutingTab({ data }: { data: any }) {
+const RoutingTab = memo(({ data }: { data: any }) => {
   const routing = data.routing || {};
   const cache = data.cache || {};
   const fwd = routing.forwarding || {};
@@ -1390,4 +1405,4 @@ function RoutingTab({ data }: { data: any }) {
       </Card>
     </div>
   );
-}
+});

@@ -10,7 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "withGlobalTauri": true,
+    "withGlobalTauri": false,
     "windows": [
       {
         "title": "Fips",
@@ -22,12 +22,7 @@
     }
   },
   "bundle": {
-    "active": true,
-    "targets": "all"
+    "active": false
   },
-  "plugins": {
-    "shell": {
-      "all": true
-    }
-  }
+  "plugins": {}
 }

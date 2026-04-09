@@ -1,4 +1,4 @@
-package com.fips.android
+package com.fips.app
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge

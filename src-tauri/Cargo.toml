@@ -1,5 +1,5 @@
 [package]
-name = "fips"
+name = "fips-native"
 version = "0.1.0"
 description = "FIPS Mesh Routing Protocol - Tauri Application"
 authors = ["you"]
@@ -9,7 +9,7 @@ edition = "2021"
 tauri-build = { version = "2", features = [] }
 
 [lib]
-name = "fips_lib"
+name = "fips_native_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [dependencies]
@@ -18,6 +18,12 @@ tauri-plugin-shell = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1.40", features = ["full"] }
+fips = { path = "../../fips", default-features = false }
+
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
+fips = { path = "../../fips", default-features = false, features = ["tun-support"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
 fips = { path = "../../fips", default-features = false, features = ["tun-support"] }
 
 [target.'cfg(not(any(target_os = "linux", target_os = "macos")))'.dependencies]

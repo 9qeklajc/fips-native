@@ -1,3 +1,3 @@
 fn main() {
-    fips_lib::run();
+    fips_native_lib::run();
 }

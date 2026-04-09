@@ -351,6 +351,7 @@ function App() {
                 Monitor View
               </button>
             )}
+            {/*
             <button
               onClick={handleExplore}
               disabled={exploring}
@@ -365,6 +366,7 @@ function App() {
                 "Explore Mesh"
               )}
             </button>
+            */}
           </div>
         </div>
 

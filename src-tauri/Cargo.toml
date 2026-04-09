@@ -1,0 +1,29 @@
+[package]
+name = "fips-android"
+version = "0.1.0"
+description = "FIPS Mesh Routing Protocol - Tauri Application"
+authors = ["you"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[lib]
+name = "fips_android_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[dependencies]
+tauri = { version = "2", features = ["devtools"] }
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1.40", features = ["full"] }
+fips = { path = "../../fips" }
+jni = "0.21"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = false

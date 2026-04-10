@@ -20,6 +20,7 @@ interface StatusData {
   effective_ipv6_mtu?: number;
   ipv6_addr?: string | null;
   node_addr?: string | null;
+  os?: string;
   is_leaf_only?: boolean;
   uptime_secs?: number;
   estimated_mesh_size?: number;
@@ -324,7 +325,23 @@ function App() {
     }
   }
 
+  async function toggleTun() {
+    if (!status || status.state !== "running") return;
+    setConnecting(true);
+    try {
+      const active = status.tun_state !== "active";
+      await invoke("set_vpn_active", { active });
+      refetch();
+    } catch (e) {
+      console.error("VPN active toggle failed:", e);
+      alert(`Operation failed: ${e}`);
+    } finally {
+      setConnecting(false);
+    }
+  }
+
   const status: StatusData | null = allData?.status || null;
+  const isMobile = status?.os === "android" || status?.os === "ios";
   const peers: Peer[] = Array.isArray(allData?.peers) ? allData.peers : [];
   const links: Link[] = Array.isArray(allData?.links) ? allData.links : [];
   const tree: TreeData | null = allData?.tree || null;
@@ -460,21 +477,44 @@ function App() {
                 </div>
 
                 <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={toggleVpn}
-                    disabled={connecting}
-                    className={`px-6 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${
-                      status?.state === "running"
-                        ? "bg-red-600 text-white hover:bg-red-500"
-                        : "bg-blue-600 text-white hover:bg-blue-500"
-                    } disabled:opacity-50`}
-                  >
-                    {connecting
-                      ? "Processing..."
-                      : status?.state === "running"
-                        ? "Disconnect"
-                        : "Connect"}
-                  </button>
+                  {isMobile && (
+                    <>
+                      {status?.state === "running" && (
+                        <button
+                          onClick={toggleTun}
+                          disabled={connecting}
+                          className={`px-6 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${
+                            status?.tun_state === "active"
+                              ? "bg-green-600/20 text-green-400 border border-green-500/30 hover:bg-green-600/30"
+                              : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700"
+                          } disabled:opacity-50 flex items-center gap-2`}
+                        >
+                          <div
+                            className={`w-2 h-2 rounded-full ${status?.tun_state === "active" ? "bg-green-500 animate-pulse" : "bg-neutral-600"}`}
+                          />
+                          {status?.tun_state === "active"
+                            ? "VPN Active"
+                            : "VPN Inactive"}
+                        </button>
+                      )}
+
+                      <button
+                        onClick={toggleVpn}
+                        disabled={connecting}
+                        className={`px-6 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${
+                          status?.state === "running"
+                            ? "bg-red-600 text-white hover:bg-red-500"
+                            : "bg-blue-600 text-white hover:bg-blue-500"
+                        } disabled:opacity-50`}
+                      >
+                        {connecting
+                          ? "Processing..."
+                          : status?.state === "running"
+                            ? "Disconnect"
+                            : "Connect"}
+                      </button>
+                    </>
+                  )}
 
                   {status?.npub && (
                     <div className="bg-neutral-900/50 rounded-xl p-2 px-3 border border-neutral-800/50">
@@ -958,15 +998,19 @@ function App() {
                         Node is Stopped
                       </h3>
                       <p className="text-neutral-500 text-sm mt-1 mb-8">
-                        Click the button below to start the FIPS mesh node.
+                        {isMobile
+                          ? "Click the button below to start the FIPS mesh node."
+                          : "FIPS mesh node is not running."}
                       </p>
-                      <button
-                        onClick={toggleVpn}
-                        disabled={connecting}
-                        className="px-10 py-4 bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 rounded-2xl text-lg font-black uppercase tracking-widest transition-all shadow-xl shadow-blue-900/20"
-                      >
-                        {connecting ? "Starting..." : "Start FIPS Node"}
-                      </button>
+                      {isMobile && (
+                        <button
+                          onClick={toggleVpn}
+                          disabled={connecting}
+                          className="px-10 py-4 bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 rounded-2xl text-lg font-black uppercase tracking-widest transition-all shadow-xl shadow-blue-900/20"
+                        >
+                          {connecting ? "Starting..." : "Start FIPS Node"}
+                        </button>
+                      )}
                     </div>
                   )}
               </div>

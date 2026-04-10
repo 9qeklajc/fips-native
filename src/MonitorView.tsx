@@ -74,6 +74,30 @@ function formatRelativeTime(timestampMs?: number | null): string {
 
 export function MonitorView({ data: initialData, onClose }: MonitorViewProps) {
   const [activeTab, setActiveTab] = useState<Tab>("Node");
+  const [toggling, setToggling] = useState(false);
+
+  const { data: monitorData, isFetching, refetch } = useQuery({
+    queryKey: ["monitor", activeTab],
+    queryFn: () => invoke<any>("get_monitor_data", { tab: activeTab }),
+    refetchInterval: 2000,
+    placeholderData: keepPreviousData,
+  });
+
+  const toggleTun = async () => {
+    const status = monitorData?.status || initialData?.status;
+    if (!status || status.state !== "running") return;
+    setToggling(true);
+    try {
+      const active = status.tun_state !== "active";
+      await invoke("set_vpn_active", { active });
+      refetch();
+    } catch (e) {
+      console.error("VPN active toggle failed:", e);
+      alert(`Operation failed: ${e}`);
+    } finally {
+      setToggling(false);
+    }
+  };
 
   useEffect(() => {
     const activeEl = document.getElementById(`tab-${activeTab}`);
@@ -97,20 +121,13 @@ export function MonitorView({ data: initialData, onClose }: MonitorViewProps) {
     "Routing",
   ];
 
-  const { data: monitorData, isFetching } = useQuery({
-    queryKey: ["monitor", activeTab],
-    queryFn: () => invoke<any>("get_monitor_data", { tab: activeTab }),
-    refetchInterval: 2000,
-    placeholderData: keepPreviousData,
-  });
-
   // Merge initial data for fields not in the current tab's poll
   const data = { ...initialData, ...monitorData };
 
   const renderContent = () => {
     switch (activeTab) {
       case "Node":
-        return <NodeTab data={data} />;
+        return <NodeTab data={data} onToggleTun={toggleTun} toggling={toggling} />;
       case "Peers":
         return <PeersTab data={data} />;
       case "Transports":
@@ -289,152 +306,199 @@ function StatItem({
   );
 }
 
-const NodeTab = memo(({ data }: { data: any }) => {
-  const status = data.status || {};
-  const fwd = status.forwarding || {};
+const NodeTab = memo(
+  ({
+    data,
+    onToggleTun,
+    toggling,
+  }: {
+    data: any;
+    onToggleTun: () => void;
+    toggling: boolean;
+  }) => {
+    const status = data.status || {};
+    const fwd = status.forwarding || {};
+    const isMobile = status.os === "android" || status.os === "ios";
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <Card title="Identity" iconColor="bg-blue-500">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <StatItem
-            label="Display Name"
-            value={status.display_name}
-            color="text-blue-400"
-          />
-          <StatItem label="Node Address" value={status.node_addr} />
-          <div className="sm:col-span-2">
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card title="Identity" iconColor="bg-blue-500">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <StatItem
-              label="Npub"
-              value={status.npub}
-              color="text-neutral-400 font-mono text-xs"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <StatItem
-              label="IPv6 Address"
-              value={status.ipv6_addr}
-              color="text-neutral-400 font-mono text-sm"
-            />
-          </div>
-        </div>
-      </Card>
-
-      <Card title="Operational State" iconColor="bg-green-500">
-        <div className="grid grid-cols-2 gap-6">
-          <StatItem
-            label="Version"
-            value={status.version}
-            color="text-green-400"
-          />
-          <StatItem
-            label="State"
-            value={status.state}
-            color={
-              status.state === "running" ? "text-green-500" : "text-red-500"
-            }
-          />
-          <div className="col-span-2">
-            <StatItem label="Uptime" value={formatUptime(status.uptime_secs)} />
-          </div>
-          <StatItem
-            label="Mesh Size (est)"
-            value={formatCount(status.estimated_mesh_size)}
-            subValue="nodes"
-          />
-          <StatItem
-            label="IPv6 MTU"
-            value={status.effective_ipv6_mtu}
-            subValue="bytes"
-          />
-          <StatItem
-            label="Leaf Only"
-            value={status.is_leaf_only ? "YES" : "NO"}
-            color={status.is_leaf_only ? "text-amber-400" : "text-neutral-500"}
-          />
-        </div>
-      </Card>
-
-      <Card title="Resources" iconColor="bg-purple-500">
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
-          <StatItem label="Peers" value={status.peer_count} />
-          <StatItem label="Links" value={status.link_count} />
-          <StatItem label="Sessions" value={status.session_count} />
-          <StatItem label="Transports" value={status.transport_count} />
-          <StatItem label="Connections" value={status.connection_count} />
-          <div className="col-span-1 lg:col-span-1">
-            <StatItem
-              label="TUN Interface"
-              value={status.tun_name}
-              color="text-purple-400"
-            />
-          </div>
-          <StatItem label="TUN State" value={status.tun_state} />
-        </div>
-      </Card>
-
-      <Card title="Forwarding Plane" iconColor="bg-blue-500">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          <div className="space-y-4">
-            <h4 className="text-[9px] uppercase tracking-tighter text-neutral-600 font-black border-l-2 border-blue-500 pl-2">
-              Traffic In
-            </h4>
-            <StatItem
-              label="Received"
-              value={formatCount(fwd.received_packets)}
-              subValue={formatBytes(fwd.received_bytes)}
+              label="Display Name"
+              value={status.display_name}
               color="text-blue-400"
             />
+            <StatItem label="Node Address" value={status.node_addr} />
+            <div className="sm:col-span-2">
+              <StatItem
+                label="Npub"
+                value={status.npub}
+                color="text-neutral-400 font-mono text-xs"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <StatItem
+                label="IPv6 Address"
+                value={status.ipv6_addr}
+                color="text-neutral-400 font-mono text-sm"
+              />
+            </div>
+          </div>
+        </Card>
+
+        <Card title="Operational State" iconColor="bg-green-500">
+          <div className="grid grid-cols-2 gap-6">
             <StatItem
-              label="Delivered"
-              value={formatCount(fwd.delivered_packets)}
-              subValue={formatBytes(fwd.delivered_bytes)}
+              label="Version"
+              value={status.version}
               color="text-green-400"
             />
-          </div>
-          <div className="space-y-4">
-            <h4 className="text-[9px] uppercase tracking-tighter text-neutral-600 font-black border-l-2 border-purple-500 pl-2">
-              Traffic Out
-            </h4>
             <StatItem
-              label="Originated"
-              value={formatCount(fwd.originated_packets)}
-              subValue={formatBytes(fwd.originated_bytes)}
+              label="State"
+              value={status.state}
+              color={
+                status.state === "running" ? "text-green-500" : "text-red-500"
+              }
+            />
+            <div className="col-span-2">
+              <StatItem
+                label="Uptime"
+                value={formatUptime(status.uptime_secs)}
+              />
+            </div>
+            <StatItem
+              label="Mesh Size (est)"
+              value={formatCount(status.estimated_mesh_size)}
+              subValue="nodes"
             />
             <StatItem
-              label="Forwarded"
-              value={formatCount(fwd.forwarded_packets)}
-              subValue={formatBytes(fwd.forwarded_bytes)}
-              color="text-purple-400"
-            />
-          </div>
-          <div className="col-span-2 pt-2 border-t border-neutral-800 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <StatItem
-              label="No Route"
-              value={formatCount(fwd.drop_no_route_packets)}
-              color="text-red-400"
+              label="IPv6 MTU"
+              value={status.effective_ipv6_mtu}
+              subValue="bytes"
             />
             <StatItem
-              label="MTU Drop"
-              value={formatCount(fwd.drop_mtu_exceeded_packets)}
-              color="text-red-400"
-            />
-            <StatItem
-              label="TTL Exp"
-              value={formatCount(fwd.ttl_exhausted_packets)}
-              color="text-orange-400"
-            />
-            <StatItem
-              label="Decode Err"
-              value={formatCount(fwd.decode_error_packets)}
-              color="text-red-500"
+              label="Leaf Only"
+              value={status.is_leaf_only ? "YES" : "NO"}
+              color={status.is_leaf_only ? "text-amber-400" : "text-neutral-500"}
             />
           </div>
-        </div>
-      </Card>
-    </div>
-  );
-});
+        </Card>
+
+        <Card title="Resources" iconColor="bg-purple-500">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+            <StatItem label="Peers" value={status.peer_count} />
+            <StatItem label="Links" value={status.link_count} />
+            <StatItem label="Sessions" value={status.session_count} />
+            <StatItem label="Transports" value={status.transport_count} />
+            <StatItem label="Connections" value={status.connection_count} />
+            <div className="col-span-1 lg:col-span-1">
+              <StatItem
+                label="TUN Interface"
+                value={status.tun_name}
+                color="text-purple-400"
+              />
+            </div>
+            <div className="col-span-2 lg:col-span-2">
+              <div className="flex items-end justify-between">
+                <StatItem
+                  label="TUN State"
+                  value={status.tun_state}
+                  color={
+                    status.tun_state === "active"
+                      ? "text-green-500"
+                      : "text-neutral-500"
+                  }
+                  />
+                {status.state === "running" && isMobile && (
+                  <button
+                    onClick={onToggleTun}
+                    disabled={toggling}
+                    className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                      status.tun_state === "active"
+                        ? "bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white"
+                        : "bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white"
+                    } disabled:opacity-50 border ${
+                      status.tun_state === "active"
+                        ? "border-red-500/20"
+                        : "border-green-500/20"
+                    }`}
+                  >
+                    {toggling
+                      ? "..."
+                      : status.tun_state === "active"
+                        ? "Disable"
+                        : "Enable"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <Card title="Forwarding Plane" iconColor="bg-blue-500">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+            <div className="space-y-4">
+              <h4 className="text-[9px] uppercase tracking-tighter text-neutral-600 font-black border-l-2 border-blue-500 pl-2">
+                Traffic In
+              </h4>
+              <StatItem
+                label="Received"
+                value={formatCount(fwd.received_packets)}
+                subValue={formatBytes(fwd.received_bytes)}
+                color="text-blue-400"
+              />
+              <StatItem
+                label="Delivered"
+                value={formatCount(fwd.delivered_packets)}
+                subValue={formatBytes(fwd.delivered_bytes)}
+                color="text-green-400"
+              />
+            </div>
+            <div className="space-y-4">
+              <h4 className="text-[9px] uppercase tracking-tighter text-neutral-600 font-black border-l-2 border-purple-500 pl-2">
+                Traffic Out
+              </h4>
+              <StatItem
+                label="Originated"
+                value={formatCount(fwd.originated_packets)}
+                subValue={formatBytes(fwd.originated_bytes)}
+              />
+              <StatItem
+                label="Forwarded"
+                value={formatCount(fwd.forwarded_packets)}
+                subValue={formatBytes(fwd.forwarded_bytes)}
+                color="text-purple-400"
+              />
+            </div>
+            <div className="col-span-2 pt-2 border-t border-neutral-800 grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <StatItem
+                label="No Route"
+                value={formatCount(fwd.drop_no_route_packets)}
+                color="text-red-400"
+              />
+              <StatItem
+                label="MTU Drop"
+                value={formatCount(fwd.drop_mtu_exceeded_packets)}
+                color="text-red-400"
+              />
+              <StatItem
+                label="TTL Exp"
+                value={formatCount(fwd.ttl_exhausted_packets)}
+                color="text-orange-400"
+              />
+              <StatItem
+                label="Decode Err"
+                value={formatCount(fwd.decode_error_packets)}
+                color="text-red-500"
+              />
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  },
+);
 
 function formatThroughput(val: number): string {
   if (val < 0) return "0 B/s";

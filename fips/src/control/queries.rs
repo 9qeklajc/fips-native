@@ -45,6 +45,7 @@ pub fn show_status(node: &Node) -> Value {
         "node_addr": hex::encode(node.node_addr().as_bytes()),
         "ipv6_addr": format!("{}", node.identity().address()),
         "state": format!("{}", node.state()),
+        "os": std::env::consts::OS,
         "is_leaf_only": node.is_leaf_only(),
         "peer_count": node.peer_count(),
         "session_count": node.session_count(),

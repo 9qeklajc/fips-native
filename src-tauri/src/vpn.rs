@@ -165,7 +165,32 @@ async fn start_vpn_internal(
 ) -> Result<(), String> {
     let mut running = state.node_running.lock().await;
     if *running {
-        return Err("VPN is already running".to_string());
+        // Node is already running, try to just start/restart the TUN interface
+        if let Some(control_tx) = &*state.control_tx.lock().await {
+            let (resp_tx, resp_rx) = tokio::sync::oneshot::channel();
+            let req = fips::control::protocol::Request {
+                command: "start_tun".to_string(),
+                params: tun_fd.map(|fd| serde_json::json!({ "fd": fd })),
+            };
+
+            if control_tx.send((req, resp_tx)).await.is_ok() {
+                match resp_rx.await {
+                    Ok(resp) if resp.status == "ok" => {
+                        if let Some(fd) = tun_fd {
+                            *state.tun_fd.lock().await = Some(fd);
+                        }
+                        return Ok(());
+                    }
+                    Ok(resp) => {
+                        return Err(resp
+                            .message
+                            .unwrap_or_else(|| "Failed to start TUN".to_string()))
+                    }
+                    Err(_) => return Err("Control channel response failed".to_string()),
+                }
+            }
+        }
+        return Err("VPN is already running and control channel is unavailable".to_string());
     }
 
     if let Some(fd) = tun_fd {
@@ -335,6 +360,40 @@ pub async fn start_vpn(state: State<'_, VpnState>, tun_fd: Option<i32>) -> Resul
 #[tauri::command]
 pub async fn stop_vpn(state: State<'_, VpnState>) -> Result<(), String> {
     stop_vpn_internal(&state.inner).await
+}
+
+#[tauri::command]
+pub async fn set_vpn_active(state: State<'_, VpnState>, active: bool) -> Result<(), String> {
+    let control_tx_opt = state.inner.control_tx.lock().await;
+    if let Some(control_tx) = &*control_tx_opt {
+        let (resp_tx, resp_rx) = tokio::sync::oneshot::channel();
+        let command = if active { "start_tun" } else { "stop_tun" };
+
+        let tun_fd = if active {
+            *state.inner.tun_fd.lock().await
+        } else {
+            None
+        };
+
+        let req = fips::control::protocol::Request {
+            command: command.to_string(),
+            params: tun_fd.map(|fd| serde_json::json!({ "fd": fd })),
+        };
+
+        if control_tx.send((req, resp_tx)).await.is_ok() {
+            match resp_rx.await {
+                Ok(resp) if resp.status == "ok" => Ok(()),
+                Ok(resp) => Err(resp
+                    .message
+                    .unwrap_or_else(|| format!("Failed to {} TUN", command))),
+                Err(_) => Err("Control channel response failed".to_string()),
+            }
+        } else {
+            Err("Failed to send control message".to_string())
+        }
+    } else {
+        Err("VPN node is not running".to_string())
+    }
 }
 
 #[cfg(target_os = "android")]

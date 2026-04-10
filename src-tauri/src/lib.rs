@@ -35,6 +35,7 @@ pub fn run() {
             dashboard::ping_node,
             vpn::start_vpn,
             vpn::stop_vpn,
+            vpn::set_vpn_active,
             vpn::get_config,
             vpn::update_config
         ])

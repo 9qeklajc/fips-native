@@ -615,83 +615,9 @@ impl Node {
 
         #[cfg(feature = "tun-support")]
         {
-            // Initialize TUN interface last, after transports and peers are ready
             if self.config.tun.enabled {
-                let address = *self.identity.address();
-                let device_result = if let Some(fd) = tun_fd {
-                    TunDevice::from_fd(fd, &self.config.tun, address).map_err(NodeError::from)
-                } else {
-                    TunDevice::create(&self.config.tun, address)
-                        .await
-                        .map_err(NodeError::from)
-                };
-
-                match device_result {
-                    Ok(device) => {
-                        let mtu = device.mtu();
-                        let name = device.name().to_string();
-                        let our_addr = *device.address();
-
-                        info!("TUN device active:");
-                        info!("     name: {}", name);
-                        info!("  address: {}", device.address());
-                        info!("      mtu: {}", mtu);
-
-                        // Calculate max MSS for TCP clamping
-                        let effective_mtu = self.effective_ipv6_mtu();
-                        let max_mss = effective_mtu.saturating_sub(40).saturating_sub(20); // IPv6 + TCP headers
-
-                        info!("effective MTU: {} bytes", effective_mtu);
-                        debug!("   max TCP MSS: {} bytes", max_mss);
-
-                        // Save the raw fd before the device moves into the reader thread.
-                        // On macOS shutdown, we close this fd to unblock the blocking
-                        // read (Linux uses interface deletion via netlink instead).
-                        // This is the same fd the reader uses; closing it causes EBADF
-                        // which breaks the reader loop before TunDevice::drop runs.
-                        let tun_fd = device.device().as_raw_fd();
-
-                        // Create writer (dups the fd for independent write access)
-                        let (writer, tun_tx) = device.create_writer(max_mss)?;
-
-                        // Spawn writer thread
-                        let writer_handle = thread::spawn(move || {
-                            writer.run();
-                        });
-
-                        // Clone tun_tx for the reader
-                        let reader_tun_tx = tun_tx.clone();
-
-                        // Create outbound channel for TUN reader → Node
-                        let tun_channel_size = self.config.node.buffers.tun_channel;
-                        let (outbound_tx, outbound_rx) =
-                            tokio::sync::mpsc::channel(tun_channel_size);
-
-                        // Spawn reader thread
-                        let transport_mtu = self.transport_mtu();
-                        let reader_handle = thread::spawn(move || {
-                            run_tun_reader(
-                                device,
-                                mtu,
-                                our_addr,
-                                reader_tun_tx,
-                                outbound_tx,
-                                transport_mtu,
-                            );
-                        });
-
-                        self.tun_state = TunState::Active;
-                        self.tun_name = Some(name);
-                        self.tun_tx = Some(tun_tx);
-                        self.tun_outbound_rx = Some(outbound_rx);
-                        self.tun_reader_handle = Some(reader_handle);
-                        self.tun_writer_handle = Some(writer_handle);
-                        self.tun_fd = Some(tun_fd);
-                    }
-                    Err(e) => {
-                        self.tun_state = TunState::Failed;
-                        warn!(error = %e, "Failed to initialize TUN, continuing without it");
-                    }
+                if let Err(e) = self.start_tun(tun_fd).await {
+                    warn!(error = %e, "Failed to initialize TUN, continuing without it");
                 }
             }
         }
@@ -735,6 +661,139 @@ impl Node {
         info!("       state: {}", self.state);
         info!("  transports: {}", self.transports.len());
         info!(" connections: {}", self.connections.len());
+        Ok(())
+    }
+
+    /// Start the TUN interface.
+    #[cfg(feature = "tun-support")]
+    pub async fn start_tun(
+        &mut self,
+        tun_fd: Option<std::os::unix::io::RawFd>,
+    ) -> Result<(), NodeError> {
+        // If already active, stop it first to allow restart (e.g. with new FD)
+        if self.tun_state == TunState::Active {
+            self.stop_tun().await?;
+        }
+
+        let address = *self.identity.address();
+        let device_result = if let Some(fd) = tun_fd {
+            TunDevice::from_fd(fd, &self.config.tun, address).map_err(NodeError::from)
+        } else {
+            TunDevice::create(&self.config.tun, address)
+                .await
+                .map_err(NodeError::from)
+        };
+
+        match device_result {
+            Ok(device) => {
+                let mtu = device.mtu();
+                let name = device.name().to_string();
+                let our_addr = *device.address();
+
+                info!("TUN device active:");
+                info!("     name: {}", name);
+                info!("  address: {}", device.address());
+                info!("      mtu: {}", mtu);
+
+                // Calculate max MSS for TCP clamping
+                let effective_mtu = self.effective_ipv6_mtu();
+                let max_mss = effective_mtu.saturating_sub(40).saturating_sub(20); // IPv6 + TCP headers
+
+                info!("effective MTU: {} bytes", effective_mtu);
+                debug!("   max TCP MSS: {} bytes", max_mss);
+
+                // Save the raw fd before the device moves into the reader thread.
+                let tun_fd = device.device().as_raw_fd();
+
+                // Create writer (dups the fd for independent write access)
+                let (writer, tun_tx) = device.create_writer(max_mss)?;
+
+                // Spawn writer thread
+                let writer_handle = thread::spawn(move || {
+                    writer.run();
+                });
+
+                // Clone tun_tx for the reader
+                let reader_tun_tx = tun_tx.clone();
+
+                // Create outbound channel for TUN reader → Node
+                let tun_channel_size = self.config.node.buffers.tun_channel;
+                let (outbound_tx, outbound_rx) = tokio::sync::mpsc::channel(tun_channel_size);
+
+                // Spawn reader thread
+                let transport_mtu = self.transport_mtu();
+                let reader_handle = thread::spawn(move || {
+                    run_tun_reader(
+                        device,
+                        mtu,
+                        our_addr,
+                        reader_tun_tx,
+                        outbound_tx,
+                        transport_mtu,
+                    );
+                });
+
+                self.tun_state = TunState::Active;
+                self.tun_name = Some(name);
+                self.tun_tx = Some(tun_tx);
+                self.tun_outbound_rx = Some(outbound_rx);
+                self.tun_reader_handle = Some(reader_handle);
+                self.tun_writer_handle = Some(writer_handle);
+                self.tun_fd = Some(tun_fd);
+                Ok(())
+            }
+            Err(e) => {
+                self.tun_state = TunState::Failed;
+                Err(e)
+            }
+        }
+    }
+
+    #[cfg(not(feature = "tun-support"))]
+    pub async fn start_tun(
+        &mut self,
+        _tun_fd: Option<std::os::unix::io::RawFd>,
+    ) -> Result<(), NodeError> {
+        Ok(())
+    }
+
+    /// Stop the TUN interface.
+    #[cfg(feature = "tun-support")]
+    pub async fn stop_tun(&mut self) -> Result<(), NodeError> {
+        if let Some(name) = self.tun_name.take() {
+            info!(name = %name, "Shutting down TUN interface");
+
+            // Drop the tun_tx to signal the writer to stop
+            self.tun_tx.take();
+
+            // Delete the interface (on Linux, causes reader to get EFAULT)
+            if let Err(e) = shutdown_tun_interface(&name).await {
+                warn!(name = %name, error = %e, "Failed to shutdown TUN interface");
+            }
+
+            // On macOS, closing the fd is what unblocks the blocking reader thread.
+            #[cfg(target_os = "macos")]
+            if let Some(fd) = self.tun_fd.take() {
+                unsafe {
+                    libc::close(fd);
+                }
+            }
+
+            // Wait for threads to finish
+            if let Some(handle) = self.tun_reader_handle.take() {
+                let _ = handle.join();
+            }
+            if let Some(handle) = self.tun_writer_handle.take() {
+                let _ = handle.join();
+            }
+
+            self.tun_state = TunState::Disabled;
+        }
+        Ok(())
+    }
+
+    #[cfg(not(feature = "tun-support"))]
+    pub async fn stop_tun(&mut self) -> Result<(), NodeError> {
         Ok(())
     }
 
@@ -789,37 +848,7 @@ impl Node {
 
         #[cfg(feature = "tun-support")]
         {
-            // Shutdown TUN interface
-            if let Some(name) = self.tun_name.take() {
-                info!(name = %name, "Shutting down TUN interface");
-
-                // Drop the tun_tx to signal the writer to stop
-                self.tun_tx.take();
-
-                // Delete the interface (on Linux, causes reader to get EFAULT)
-                if let Err(e) = shutdown_tun_interface(&name).await {
-                    warn!(name = %name, error = %e, "Failed to shutdown TUN interface");
-                }
-
-                // On macOS, closing the fd is what unblocks the blocking reader thread.
-                // The interface is auto-destroyed when the fd is closed.
-                #[cfg(target_os = "macos")]
-                if let Some(fd) = self.tun_fd.take() {
-                    unsafe {
-                        libc::close(fd);
-                    }
-                }
-
-                // Wait for threads to finish
-                if let Some(handle) = self.tun_reader_handle.take() {
-                    let _ = handle.join();
-                }
-                if let Some(handle) = self.tun_writer_handle.take() {
-                    let _ = handle.join();
-                }
-
-                self.tun_state = TunState::Disabled;
-            }
+            self.stop_tun().await?;
         }
 
         self.state = NodeState::Stopped;

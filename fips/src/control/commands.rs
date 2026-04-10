@@ -25,6 +25,14 @@ pub async fn dispatch(
             let resp = disconnect(node, params);
             let _ = response_tx.send(resp);
         }
+        "start_tun" => {
+            let resp = start_tun(node, params).await;
+            let _ = response_tx.send(resp);
+        }
+        "stop_tun" => {
+            let resp = stop_tun(node).await;
+            let _ = response_tx.send(resp);
+        }
         "ping" => ping(node, params, response_tx).await,
         "explore" => {
             let resp = explore(node, params).await;
@@ -172,5 +180,26 @@ fn disconnect(node: &mut Node, params: Option<&Value>) -> Response {
     match node.api_disconnect(npub) {
         Ok(data) => Response::ok(data),
         Err(msg) => Response::error(msg),
+    }
+}
+
+/// Start the TUN interface.
+async fn start_tun(node: &mut Node, params: Option<&Value>) -> Response {
+    let tun_fd = params
+        .and_then(|p| p.get("fd"))
+        .and_then(|v| v.as_i64())
+        .map(|fd| fd as std::os::unix::io::RawFd);
+
+    match node.start_tun(tun_fd).await {
+        Ok(()) => Response::ok(serde_json::json!({"status": "active"})),
+        Err(e) => Response::error(e.to_string()),
+    }
+}
+
+/// Stop the TUN interface.
+async fn stop_tun(node: &mut Node) -> Response {
+    match node.stop_tun().await {
+        Ok(()) => Response::ok(serde_json::json!({"status": "disabled"})),
+        Err(e) => Response::error(e.to_string()),
     }
 }

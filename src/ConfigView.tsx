@@ -118,7 +118,7 @@ export function ConfigView({ onClose }: ConfigViewProps) {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-20 text-center text-neutral-400">
+      <div className="mx-auto max-w-7xl px-4 py-20 text-center text-neutral-400">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           <p className="font-bold tracking-widest uppercase text-xs">
@@ -132,9 +132,9 @@ export function ConfigView({ onClose }: ConfigViewProps) {
   if (!config) return null;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 px-4 py-4 sm:py-8 pb-20">
+    <div className="mx-auto max-w-7xl space-y-6 px-4 py-4 sm:py-8 pb-20">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">
             Settings & Tools
@@ -145,7 +145,13 @@ export function ConfigView({ onClose }: ConfigViewProps) {
             </span>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end items-center">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-neutral-800 text-white hover:bg-neutral-700 rounded-lg text-sm font-bold transition-all border border-neutral-700 whitespace-nowrap"
+          >
+            Cancel
+          </button>
           <button
             onClick={saveConfig}
             disabled={saving}
@@ -153,16 +159,10 @@ export function ConfigView({ onClose }: ConfigViewProps) {
           >
             {saving ? "Saving..." : "Save & Restart"}
           </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-neutral-800 text-white hover:bg-neutral-700 rounded-lg text-sm font-bold transition-all border border-neutral-700 whitespace-nowrap"
-          >
-            Cancel
-          </button>
         </div>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-6">
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl text-sm">
             {error}

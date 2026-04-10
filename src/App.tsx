@@ -296,11 +296,15 @@ function StatChip({ label, value }: { label: string; value: string | number }) {
 }
 
 function App() {
-  const [viewMode, setViewMode] = useState<"dashboard" | "monitor" | "settings">(
-    "dashboard",
-  );
+  const [viewMode, setViewMode] = useState<
+    "dashboard" | "monitor" | "settings"
+  >("dashboard");
 
-  const { data: allData, isLoading, refetch } = useQuery({
+  const {
+    data: allData,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["fipsInfo"],
     queryFn: () => invoke<any>("get_info"),
     refetchInterval: 5000,
@@ -458,7 +462,7 @@ function App() {
           {viewMode === "dashboard" && (
             <div className="mx-auto max-w-7xl px-4 py-4 sm:py-8 space-y-6">
               {/* Header */}
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                 <div>
                   <h1 className="text-3xl font-bold text-white tracking-tight">
                     FIPS
@@ -476,7 +480,7 @@ function App() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
                   {isMobile && (
                     <>
                       {status?.state === "running" && (
@@ -493,8 +497,8 @@ function App() {
                             className={`w-2 h-2 rounded-full ${status?.tun_state === "active" ? "bg-green-500 animate-pulse" : "bg-neutral-600"}`}
                           />
                           {status?.tun_state === "active"
-                            ? "VPN Active"
-                            : "VPN Inactive"}
+                            ? "Disable VPN"
+                            : "Enable VPN"}
                         </button>
                       )}
 

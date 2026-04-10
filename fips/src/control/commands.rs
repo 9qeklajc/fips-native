@@ -5,9 +5,9 @@
 
 use super::protocol::Response;
 use crate::node::Node;
+use hex;
 use serde_json::Value;
 use tracing::debug;
-use hex;
 
 /// Dispatch a mutating command to the appropriate handler.
 pub async fn dispatch(
@@ -69,7 +69,9 @@ async fn ping(
         match hex::decode(target_str) {
             Ok(bytes) => {
                 if bytes.len() != 16 {
-                    let _ = response_tx.send(Response::error("invalid node address length (expected 16 bytes)"));
+                    let _ = response_tx.send(Response::error(
+                        "invalid node address length (expected 16 bytes)",
+                    ));
                     return;
                 }
                 let mut addr = [0u8; 16];
@@ -91,7 +93,8 @@ async fn ping(
     node.next_ping_seq = node.next_ping_seq.wrapping_add(1);
 
     // Register the pending ping
-    node.pending_pings.insert((target_addr, seq), (std::time::Instant::now(), response_tx));
+    node.pending_pings
+        .insert((target_addr, seq), (std::time::Instant::now(), response_tx));
 
     // Construct ICMPv6 Echo Request
     let packet = crate::upper::icmp::build_echo_request(

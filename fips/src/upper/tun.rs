@@ -127,7 +127,9 @@ impl TunDevice {
             // Read the actual device name (on macOS this is the kernel-assigned utun* name)
             let actual_name = {
                 use ::tun::AbstractDevice;
-                device.tun_name().map_err(|e| TunError::Configure(format!("failed to get device name: {}", e)))?
+                device
+                    .tun_name()
+                    .map_err(|e| TunError::Configure(format!("failed to get device name: {}", e)))?
             };
 
             // Configure address and bring up via platform-specific method
@@ -151,7 +153,11 @@ impl TunDevice {
     /// Create a TunDevice from an existing file descriptor.
     ///
     /// Used on Android where the TUN device is created by the VpnService.
-    pub fn from_fd(fd: std::os::unix::io::RawFd, config: &TunConfig, address: FipsAddress) -> Result<Self, TunError> {
+    pub fn from_fd(
+        fd: std::os::unix::io::RawFd,
+        config: &TunConfig,
+        address: FipsAddress,
+    ) -> Result<Self, TunError> {
         #[cfg(feature = "tun-support")]
         {
             let mut tun_config = ::tun::Configuration::default();
@@ -222,7 +228,9 @@ impl TunDevice {
     pub fn read_packet(&mut self, buf: &mut [u8]) -> Result<usize, TunError> {
         #[cfg(feature = "tun-support")]
         {
-            self.device.read(buf).map_err(|e| TunError::Configure(format!("read failed: {}", e)))
+            self.device
+                .read(buf)
+                .map_err(|e| TunError::Configure(format!("read failed: {}", e)))
         }
         #[cfg(not(feature = "tun-support"))]
         {
@@ -383,7 +391,9 @@ pub fn run_tun_reader(
     outbound_tx: TunOutboundTx,
     transport_mtu: u16,
 ) {
-    use super::icmp::{build_dest_unreachable, effective_ipv6_mtu, should_send_icmp_error, DestUnreachableCode};
+    use super::icmp::{
+        DestUnreachableCode, build_dest_unreachable, effective_ipv6_mtu, should_send_icmp_error,
+    };
     use super::tcp_mss::clamp_tcp_mss;
 
     let name = device.name().to_string();
@@ -532,13 +542,16 @@ impl std::fmt::Debug for TunDevice {
 // Platform-specific TUN configuration
 // =============================================================================
 
-#[cfg(all(any(target_os = "linux", target_os = "android"), feature = "tun-support"))]
+#[cfg(all(
+    any(target_os = "linux", target_os = "android"),
+    feature = "tun-support"
+))]
 mod platform {
-    #[cfg(target_os = "linux")]
-    use rtnetlink::{new_connection, Handle, LinkUnspec, RouteMessageBuilder};
+    use super::TunError;
     #[cfg(target_os = "linux")]
     use futures::TryStreamExt;
-    use super::TunError;
+    #[cfg(target_os = "linux")]
+    use rtnetlink::{Handle, LinkUnspec, RouteMessageBuilder, new_connection};
     use std::net::Ipv6Addr;
     #[allow(unused_imports)]
     use tracing::debug;
@@ -642,7 +655,13 @@ mod platform {
             // Add ip6 rule to ensure fd00::/8 uses the main table, preventing other
             // routing software (e.g. Tailscale) from intercepting FIPS traffic via
             // catch-all rules in auxiliary routing tables.
-            let mut rule_req = handle.rule().add().v6().destination_prefix(fd_prefix, 8).table_id(254).priority(5265);
+            let mut rule_req = handle
+                .rule()
+                .add()
+                .v6()
+                .destination_prefix(fd_prefix, 8)
+                .table_id(254)
+                .priority(5265);
             rule_req.message_mut().header.action = 1.into(); // FR_ACT_TO_TBL
             if let Err(e) = rule_req.execute().await {
                 debug!("ip6 rule for fd00::/8 not added (may already exist): {e}");
@@ -710,7 +729,11 @@ mod platform {
     /// Configure a network interface with an IPv6 address using ifconfig/route.
     pub async fn configure_interface(name: &str, addr: Ipv6Addr, mtu: u16) -> Result<(), TunError> {
         // Add IPv6 address with /128 prefix
-        run_cmd("ifconfig", &[name, "inet6", &addr.to_string(), "prefixlen", "128"]).await?;
+        run_cmd(
+            "ifconfig",
+            &[name, "inet6", &addr.to_string(), "prefixlen", "128"],
+        )
+        .await?;
 
         // Set MTU
         run_cmd("ifconfig", &[name, "mtu", &mtu.to_string()]).await?;
@@ -719,7 +742,19 @@ mod platform {
         run_cmd("ifconfig", &[name, "up"]).await?;
 
         // Add route for fd00::/8 (FIPS address space) via this interface
-        run_cmd("route", &["add", "-inet6", "-prefixlen", "8", "fd00::", "-interface", name]).await?;
+        run_cmd(
+            "route",
+            &[
+                "add",
+                "-inet6",
+                "-prefixlen",
+                "8",
+                "fd00::",
+                "-interface",
+                name,
+            ],
+        )
+        .await?;
 
         Ok(())
     }
@@ -747,8 +782,12 @@ mod platform {
 
 #[cfg(not(feature = "tun-support"))]
 mod platform {
-    pub fn is_ipv6_disabled() -> bool { false }
-    pub async fn interface_exists(_name: &str) -> bool { false }
+    pub fn is_ipv6_disabled() -> bool {
+        false
+    }
+    pub async fn interface_exists(_name: &str) -> bool {
+        false
+    }
 }
 
 #[cfg(test)]

@@ -1,10 +1,12 @@
 //! RX event loop and packet dispatch.
 
-use crate::control::{commands, ControlSocket};
 use crate::control::queries;
+use crate::control::{ControlSocket, commands};
+use crate::node::wire::{
+    COMMON_PREFIX_SIZE, CommonPrefix, FMP_VERSION, PHASE_ESTABLISHED, PHASE_MSG1, PHASE_MSG2,
+};
 use crate::node::{Node, NodeError};
 use crate::transport::ReceivedPacket;
-use crate::node::wire::{CommonPrefix, PHASE_ESTABLISHED, PHASE_MSG1, PHASE_MSG2, FMP_VERSION, COMMON_PREFIX_SIZE};
 use std::time::Duration;
 use tracing::{debug, info, warn};
 
@@ -29,8 +31,7 @@ impl Node {
     /// This method takes ownership of the packet_rx channel and runs
     /// until the channel is closed (typically when stop() is called).
     pub async fn run_rx_loop(&mut self) -> Result<(), NodeError> {
-        let mut packet_rx = self.packet_rx.take()
-            .ok_or(NodeError::NotStarted)?;
+        let mut packet_rx = self.packet_rx.take().ok_or(NodeError::NotStarted)?;
 
         // Take the TUN outbound receiver, or create a dummy channel that never
         // produces messages (when TUN is disabled). Holding the sender prevents
@@ -48,7 +49,7 @@ impl Node {
             let (tx, rx) = tokio::sync::mpsc::channel::<Vec<u8>>(1);
             (rx, Some(tx))
         };
- 
+
         // Take the DNS identity receiver, or create a dummy channel (when DNS
         // is disabled). Same pattern as TUN outbound.
         #[cfg(feature = "tun-support")]
@@ -61,12 +62,14 @@ impl Node {
         };
         #[cfg(not(feature = "tun-support"))]
         let (mut dns_identity_rx, _dns_guard) = {
-            let (tx, rx) = tokio::sync::mpsc::channel::<crate::node::dns_stub::DnsResolvedIdentity>(1);
+            let (tx, rx) =
+                tokio::sync::mpsc::channel::<crate::node::dns_stub::DnsResolvedIdentity>(1);
             (rx, Some(tx))
         };
 
-        let mut tick = tokio::time::interval(Duration::from_secs(self.config.node.tick_interval_secs));
- 
+        let mut tick =
+            tokio::time::interval(Duration::from_secs(self.config.node.tick_interval_secs));
+
         // Set up control socket channel. Use external channel if provided,
         // otherwise create a new one.
         let (control_tx, mut control_rx) = if let Some(rx) = self.control_rx.take() {
@@ -82,7 +85,7 @@ impl Node {
         } else {
             tokio::sync::mpsc::channel::<crate::control::ControlMessage>(32)
         };
- 
+
         if self.config.node.control.enabled {
             let config = self.config.node.control.clone();
             let tx = control_tx.clone();

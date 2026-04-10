@@ -202,7 +202,7 @@ pub fn build_dest_unreachable(
     // === IPv6 Header ===
     // Version (4) + Traffic Class (8) + Flow Label (20)
     response[0] = 0x60; // Version 6, TC high bits = 0
-                        // response[1..4] = 0 (TC low bits + flow label)
+    // response[1..4] = 0 (TC low bits + flow label)
 
     // Payload length (ICMPv6 header + body)
     let payload_len = icmpv6_len as u16;
@@ -319,7 +319,7 @@ pub fn build_packet_too_big(
     // === IPv6 Header ===
     // Version (4) + Traffic Class (8) + Flow Label (20)
     response[0] = 0x60; // Version 6, TC high bits = 0
-                        // response[1..4] = 0 (TC low bits + flow label)
+    // response[1..4] = 0 (TC low bits + flow label)
 
     // Payload length (ICMPv6 header + body)
     let payload_len = icmpv6_len as u16;

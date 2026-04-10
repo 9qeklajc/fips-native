@@ -23,10 +23,16 @@ mod platform {
     pub struct PacketSocket;
     impl PacketSocket {
         pub fn send_to(&self, _data: &[u8], _dest_mac: &[u8; 6]) -> std::io::Result<usize> {
-            Err(std::io::Error::new(std::io::ErrorKind::Other, "Not supported"))
+            Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Not supported",
+            ))
         }
         pub fn recv_from(&self, _buf: &mut [u8]) -> std::io::Result<(usize, [u8; 6])> {
-            Err(std::io::Error::new(std::io::ErrorKind::Other, "Not supported"))
+            Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Not supported",
+            ))
         }
     }
 }
@@ -52,7 +58,11 @@ mod async_impl {
             Ok(Self { inner: async_fd })
         }
 
-        pub async fn send_to(&self, data: &[u8], dest_mac: &[u8; 6]) -> Result<usize, TransportError> {
+        pub async fn send_to(
+            &self,
+            data: &[u8],
+            dest_mac: &[u8; 6],
+        ) -> Result<usize, TransportError> {
             loop {
                 let mut guard = self
                     .inner
@@ -68,10 +78,7 @@ mod async_impl {
             }
         }
 
-        pub async fn recv_from(
-            &self,
-            buf: &mut [u8],
-        ) -> Result<(usize, [u8; 6]), TransportError> {
+        pub async fn recv_from(&self, buf: &mut [u8]) -> Result<(usize, [u8; 6]), TransportError> {
             loop {
                 let mut guard = self
                     .inner
@@ -157,16 +164,17 @@ mod async_impl {
             })
         }
 
-        pub async fn send_to(&self, data: &[u8], dest_mac: &[u8; 6]) -> Result<usize, TransportError> {
+        pub async fn send_to(
+            &self,
+            data: &[u8],
+            dest_mac: &[u8; 6],
+        ) -> Result<usize, TransportError> {
             self.inner
                 .send_to(data, dest_mac)
                 .map_err(|e| TransportError::SendFailed(format!("{}", e)))
         }
 
-        pub async fn recv_from(
-            &self,
-            buf: &mut [u8],
-        ) -> Result<(usize, [u8; 6]), TransportError> {
+        pub async fn recv_from(&self, buf: &mut [u8]) -> Result<(usize, [u8; 6]), TransportError> {
             let mut rx = self.rx.lock().await;
             match rx.recv().await {
                 Some((data, mac)) => {
@@ -193,7 +201,11 @@ mod async_impl {
         pub fn new(_socket: PacketSocket) -> Result<Self, TransportError> {
             Err(TransportError::StartFailed("Not supported".into()))
         }
-        pub async fn send_to(&self, _data: &[u8], _dest_mac: &[u8; 6]) -> Result<usize, TransportError> {
+        pub async fn send_to(
+            &self,
+            _data: &[u8],
+            _dest_mac: &[u8; 6],
+        ) -> Result<usize, TransportError> {
             Err(TransportError::SendFailed("Not supported".into()))
         }
         pub async fn recv_from(&self, _buf: &mut [u8]) -> Result<(usize, [u8; 6]), TransportError> {
@@ -205,8 +217,8 @@ mod async_impl {
     }
 }
 
-pub use platform::PacketSocket;
 pub use async_impl::AsyncPacketSocket;
+pub use platform::PacketSocket;
 
 impl PacketSocket {
     /// Wrap this socket in an async wrapper for tokio integration.
